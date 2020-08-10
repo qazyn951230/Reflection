@@ -20,30 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Reflection
-import QuartzCore
+struct TargetGenericContextDescriptorHeader {
+    let parametersCount: UInt16
+    let requirementsCount: UInt16
+    let keyArgumentsCount: UInt16
+    let extraArgumentsCount: UInt16
 
-struct Foobar {
-    let value: Int
+    var argumentsCount: UInt32 {
+        UInt32(keyArgumentsCount) + UInt32(extraArgumentsCount)
+    }
+    
+    var hasArguments: Bool {
+        keyArgumentsCount > 0 || extraArgumentsCount > 0
+    }
 }
 
-let bar = Foobar(value: 12)
-Swift.dump(bar)
-//▿ Demo.Foobar
-//- value: 12
-
-// CustomDebugStringConvertible
-Swift.dump(CGSize.zero)
-//▿ (0.0, 0.0)
-//- width: 0.0
-//- height: 0.0
-
-// CustomStringConvertible & CustomDebugStringConvertible
-Swift.dump(Array(repeating: 2, count: 2))
-//▿ 2 elements
-//- 2
-//- 2
-
-print("--------")
-
-//dump(bar)
+struct TargetTypeGenericContextDescriptorHeader {
+    let instantiationCache: Int32
+    let defaultInstantiationPattern: Int32
+    let base: TargetGenericContextDescriptorHeader
+}

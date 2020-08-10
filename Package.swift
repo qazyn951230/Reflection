@@ -16,8 +16,21 @@ let package = Package(
     dependencies: [],
     targets: [
         .target(
+            name: "CReflection",
+            dependencies: [],
+            cxxSettings: [
+                .headerSearchPath("External/swift/include"),
+                .headerSearchPath("External/llvm/include"),
+                .headerSearchPath("External/release/swift/include"),
+                .headerSearchPath("External/release/llvm/include")
+            ],
+            linkerSettings: [
+                .linkedLibrary("swiftDemangle")
+            ]
+        ),
+        .target(
             name: "Reflection",
-            dependencies: []),
+            dependencies: ["CReflection"]),
         .testTarget(
             name: "ReflectionTests",
             dependencies: ["Reflection"]),

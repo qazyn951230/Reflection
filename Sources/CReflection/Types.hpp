@@ -20,30 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Reflection
-import QuartzCore
+#ifndef REFLECTION_TYPES_HPP
+#define REFLECTION_TYPES_HPP
 
-struct Foobar {
-    let value: Int
+#include "include/Types.h"
+
+namespace swift {
+namespace Demangle {
+class Demangler;
+class Node;
+}
 }
 
-let bar = Foobar(value: 12)
-Swift.dump(bar)
-//▿ Demo.Foobar
-//- value: 12
+SP_SIMPLE_CONVERSION(swift::Demangle::Demangler, demangler_p)
+SP_SIMPLE_CONVERSION(swift::Demangle::Node, dnode_p)
 
-// CustomDebugStringConvertible
-Swift.dump(CGSize.zero)
-//▿ (0.0, 0.0)
-//- width: 0.0
-//- height: 0.0
-
-// CustomStringConvertible & CustomDebugStringConvertible
-Swift.dump(Array(repeating: 2, count: 2))
-//▿ 2 elements
-//- 2
-//- 2
-
-print("--------")
-
-//dump(bar)
+#endif //REFLECTION_TYPES_HPP

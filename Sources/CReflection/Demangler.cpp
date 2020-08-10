@@ -20,30 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Reflection
-import QuartzCore
+#include <swift/Demangling/Demangler.h>
+#include "Demangler.hpp"
 
-struct Foobar {
-    let value: Int
+using namespace swift;
+using namespace swift::Demangle;
+
+demangler_p demangler_create() {
+    return wrap(new Demangler);
 }
 
-let bar = Foobar(value: 12)
-Swift.dump(bar)
-//▿ Demo.Foobar
-//- value: 12
+void demangler_free(demangler_p ref) {
+    delete unwrap(ref);
+}
 
-// CustomDebugStringConvertible
-Swift.dump(CGSize.zero)
-//▿ (0.0, 0.0)
-//- width: 0.0
-//- height: 0.0
+void demangler_clear(demangler_p demangler) {
+    unwrap(demangler)->clear();
+}
 
-// CustomStringConvertible & CustomDebugStringConvertible
-Swift.dump(Array(repeating: 2, count: 2))
-//▿ 2 elements
-//- 2
-//- 2
-
-print("--------")
-
-//dump(bar)
+dnode_p demangler_create_node(demangler_p demangler, CRDNodeKind kind) {
+    return wrap(unwrap(demangler)->createNode(static_cast<Node::Kind>(kind)));
+}

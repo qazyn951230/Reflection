@@ -1,0 +1,5 @@
+---
+Name: CReflection
+Tags:
+- Name: CRDNodeKind
+  SwiftName: DNodeKind

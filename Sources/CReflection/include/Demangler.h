@@ -20,30 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Reflection
-import QuartzCore
+#ifndef REFLECTION_DEMANGLER_H
+#define REFLECTION_DEMANGLER_H
 
-struct Foobar {
-    let value: Int
-}
+#include "Types.h"
+#include "CRDNodeKind.h"
 
-let bar = Foobar(value: 12)
-Swift.dump(bar)
-//▿ Demo.Foobar
-//- value: 12
+SP_C_FILE_BEGIN
 
-// CustomDebugStringConvertible
-Swift.dump(CGSize.zero)
-//▿ (0.0, 0.0)
-//- width: 0.0
-//- height: 0.0
+demangler_p demangler_create();
+void demangler_free(demangler_p ref);
 
-// CustomStringConvertible & CustomDebugStringConvertible
-Swift.dump(Array(repeating: 2, count: 2))
-//▿ 2 elements
-//- 2
-//- 2
+void demangler_clear(demangler_p demangler);
 
-print("--------")
+dnode_p demangler_create_node(demangler_p demangler, CRDNodeKind kind);
 
-//dump(bar)
+SP_C_FILE_END
+
+#endif //REFLECTION_DEMANGLER_H

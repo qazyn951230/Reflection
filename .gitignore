@@ -4,3 +4,6 @@
 /*.xcodeproj
 xcuserdata/
 .idea
+cmake-build-debug
+Sources/CReflection/External/*
+!Sources/CReflection/External/.gitkeep

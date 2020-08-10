@@ -20,30 +20,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Reflection
-import QuartzCore
+#ifndef REFLECTION_TYPES_H
+#define REFLECTION_TYPES_H
 
-struct Foobar {
-    let value: Int
-}
+#if (__cplusplus)
+#include <cstdint>
+#include <cstdbool>
+#else
+#include <stdint.h>
+#include <stdbool.h>
+#endif // (__cplusplus)
 
-let bar = Foobar(value: 12)
-Swift.dump(bar)
-//▿ Demo.Foobar
-//- value: 12
+#include "Config.h"
 
-// CustomDebugStringConvertible
-Swift.dump(CGSize.zero)
-//▿ (0.0, 0.0)
-//- width: 0.0
-//- height: 0.0
+SP_EXTERN_C_BEGIN
 
-// CustomStringConvertible & CustomDebugStringConvertible
-Swift.dump(Array(repeating: 2, count: 2))
-//▿ 2 elements
-//- 2
-//- 2
+SP_EXTERN_C_END
 
-print("--------")
+SP_C_FILE_BEGIN
 
-//dump(bar)
+SP_OPAQUE_POINTER(demangler);
+SP_OPAQUE_POINTER(dnode);
+
+SP_C_FILE_END
+
+#endif //REFLECTION_TYPES_H
