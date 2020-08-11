@@ -21,29 +21,42 @@
 // SOFTWARE.
 
 import Reflection
-import QuartzCore
+import CReflection
+// import QuartzCore
 
-struct Foobar {
-    let value: Int
+class Foobar {
+    let value: Int = 12
 }
 
-let bar = Foobar(value: 12)
-Swift.dump(bar)
-//▿ Demo.Foobar
-//- value: 12
+print(Metadata.readKind(from: Foobar.self))
 
-// CustomDebugStringConvertible
-Swift.dump(CGSize.zero)
-//▿ (0.0, 0.0)
-//- width: 0.0
-//- height: 0.0
+//let t: Any.Type = Foobar.self
+//run(unsafeBitCast(t, to: UnsafeRawPointer.self))
 
-// CustomStringConvertible & CustomDebugStringConvertible
-Swift.dump(Array(repeating: 2, count: 2))
-//▿ 2 elements
-//- 2
-//- 2
+//let metadata = StructMetadata.load(from: Foobar.self)
+//var d: ContextDescriptor? = ContextDescriptor(other: metadata.description)
+//while let t = d {
+//    print(t.kind)
+//    d = d?.parent
+//}
 
-print("--------")
+//let bar = Foobar(value: 12)
+//Swift.dump(bar)
+////▿ Demo.Foobar
+////- value: 12
+//
+//// CustomDebugStringConvertible
+//Swift.dump(CGSize.zero)
+////▿ (0.0, 0.0)
+////- width: 0.0
+////- height: 0.0
+//
+//// CustomStringConvertible & CustomDebugStringConvertible
+//Swift.dump(Array(repeating: 2, count: 2))
+////▿ 2 elements
+////- 2
+////- 2
+
+//print("--------")
 
 //dump(bar)

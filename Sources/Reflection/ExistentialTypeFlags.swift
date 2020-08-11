@@ -20,52 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyMetadata {
-    private let box: _AnyMetadataBox
+public struct ExistentialTypeFlags: RawRepresentable {
+    public typealias RawValue = UInt32
 
-    public init<T>(_ value: T) where T: TargetMetadata {
-        box = _AnyMetadata<T>(value)
+    public let rawValue: UInt32
+
+    public init?(rawValue: UInt32) {
+        self.init(rawValue)
     }
 
-    public var kind: Metadata.Kind {
-        box.kind
+    public init(_ rawValue: UInt32) {
+        self.rawValue = rawValue
     }
 
-    public var isValueMetadata: Bool {
-        kind == .struct || kind == .enum
+    public var hasSuperclassConstraint: Bool {
+        (rawValue & ExistentialTypeFlags.hasSuperclassMask) != 0
     }
 
-    public var isStructMetadata: Bool {
-        kind == .struct
-    }
-
-    public var isEnumMetadata: Bool {
-        kind == .enum
-    }
-
-    public func `as`<T>(type: T.Type) -> T? where T: TargetMetadata {
-        box.as(type: type)
-    }
-}
-
-private protocol _AnyMetadataBox {
-    var kind: Metadata.Kind { get }
-
-    func `as`<T>(type: T.Type) -> T? where T: TargetMetadata
-}
-
-private final class _AnyMetadata<T>: _AnyMetadataBox where T: TargetMetadata {
-    let value: T
-
-    init(_ value: T) {
-        self.value = value
-    }
-
-    var kind: Metadata.Kind {
-        value.kind
-    }
-
-    func `as`<T>(type: T.Type) -> T? where T: TargetMetadata {
-        value as? T
-    }
+    private static let numWitnessTablesMask: UInt32 = 0x00FF_FFFF
+    private static let classConstraintMask: UInt32 = 0x8000_0000
+    private static let hasSuperclassMask: UInt32 = 0x4000_0000
+    private static let specialProtocolMask: UInt32 = 0x3F00_0000
+    private static let specialProtocolShift: UInt32 = 24
 }

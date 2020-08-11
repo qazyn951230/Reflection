@@ -20,52 +20,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyMetadata {
-    private let box: _AnyMetadataBox
+public struct AnyContextDescriptor {
+    private let box: _AnyContextDescriptorBox
 
-    public init<T>(_ value: T) where T: TargetMetadata {
-        box = _AnyMetadata<T>(value)
+    public init<T>(_ value: T) where T: TargetContextDescriptor {
+        box = _AnyContextDescriptor<T>(value)
     }
 
-    public var kind: Metadata.Kind {
+    public var kind: ContextDescriptorKind {
         box.kind
     }
 
-    public var isValueMetadata: Bool {
-        kind == .struct || kind == .enum
-    }
-
-    public var isStructMetadata: Bool {
-        kind == .struct
-    }
-
-    public var isEnumMetadata: Bool {
-        kind == .enum
-    }
-
-    public func `as`<T>(type: T.Type) -> T? where T: TargetMetadata {
-        box.as(type: type)
+    public var parent: ContextDescriptor? {
+        box.parent
     }
 }
 
-private protocol _AnyMetadataBox {
-    var kind: Metadata.Kind { get }
-
-    func `as`<T>(type: T.Type) -> T? where T: TargetMetadata
+private protocol _AnyContextDescriptorBox {
+    var kind: ContextDescriptorKind { get }
+    var parent: ContextDescriptor? { get }
 }
 
-private final class _AnyMetadata<T>: _AnyMetadataBox where T: TargetMetadata {
+private class _AnyContextDescriptor<T>: _AnyContextDescriptorBox where T: TargetContextDescriptor {
     let value: T
 
     init(_ value: T) {
         self.value = value
     }
 
-    var kind: Metadata.Kind {
+    var kind: ContextDescriptorKind {
         value.kind
     }
 
-    func `as`<T>(type: T.Type) -> T? where T: TargetMetadata {
-        value as? T
+    var parent: ContextDescriptor? {
+        value.parent
     }
 }

@@ -27,16 +27,16 @@ struct StandardOutput: TextOutputStream {
     init() {
         // Do nothing.
     }
-    
+
     // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/flockfile.3.html
     mutating func _lock() {
         flockfile(stdout)
     }
-    
+
     mutating func _unlock() {
         funlockfile(stdout)
     }
-    
+
     mutating func write(_ string: String) {
         if string.isEmpty {
             return
@@ -52,30 +52,30 @@ struct StandardOutput: TextOutputStream {
             }
         }
     }
-    
+
     mutating func write(byte: UInt8) {
         fputc(Int32(byte), stdout)
     }
-    
+
     mutating func write(char: Int32) {
         fputc(char, stdout)
     }
-    
+
     mutating func write(byte: UInt8, count: Int) {
         write(char: Int32(byte), count: count)
     }
-    
+
     mutating func write(char: Int32, count: Int) {
         for _ in 0 ..< count {
             fputc(char, stdout)
         }
     }
-    
+
     // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/fwrite.3.html
     mutating func write(_ string: UnsafePointer<UInt8>, lenght: Int) {
         fwrite(string.reinterpretCast(), 1, lenght, stdout)
     }
-    
+
     mutating func write(_ string: UnsafePointer<UInt8>) {
         var p = string
         while p.pointee != 0 {

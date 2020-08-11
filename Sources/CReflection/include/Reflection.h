@@ -27,4 +27,10 @@
 #include "Types.h"
 #include "Demangler.h"
 
+SP_EXTERN_C_BEGIN
+
+void run(const void* value);
+
+SP_EXTERN_C_END
+
 #endif // REFLECTION_CREFLECTION_H

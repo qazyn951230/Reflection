@@ -3,17 +3,11 @@ add_library(CReflection
     Demangler.hpp
     Reflection.cpp
     Types.hpp
-    ABI/Metadata.hpp
     include/Config.h
     include/CRDNodeKind.h
     include/Demangler.h
     include/Reflection.h
-    include/Types.h
-    SwiftShims/HeapObject.h
-    SwiftShims/RefCount.h
-    SwiftShims/SwiftStddef.h
-    SwiftShims/System.h
-    SwiftShims/Target.h)
+    include/Types.h)
 
 set_target_properties(CReflection PROPERTIES
     LANGUAGE CXX

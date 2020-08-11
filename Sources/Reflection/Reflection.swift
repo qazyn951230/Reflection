@@ -26,7 +26,7 @@ public struct Reflection {
     public init<T>(type: T.Type) {
         box = ReflectionBox.load(type: type)
     }
-    
+
     public init(_ type: Any.Type) {
         box = ReflectionBox.load(type: type)
     }
@@ -57,7 +57,7 @@ public struct ReflectedProperty {
         self.name = name
         self.offset = offset
     }
-    
+
     public func value<T, K>(as type: K.Type, from object: T) -> K? {
         guard let offset = self.offset else {
             return nil

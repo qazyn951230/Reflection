@@ -21,12 +21,31 @@
 // SOFTWARE.
 
 /* .../swift/include/swift/ABI/MetadataValues.h */
+
+/// Kinds of context descriptor.
+public enum ContextDescriptorKind: UInt8 {
+    case module = 0
+    case `extension` = 1
+    case anonymous = 2
+    case `protocol` = 3
+    case opaqueType = 4
+    case `class` = 16
+    case `struct` = 17
+    case `enum` = 18
+}
+
 /// Common flags stored in the first 32-bit word of any context descriptor.
-public struct ContextDescriptorKind: OptionSet { // ContextDescriptorFlags
+public struct ContextDescriptorFlags: OptionSet {
     public var rawValue: UInt32
 
     public init(rawValue: UInt32) {
         self.rawValue = rawValue
+    }
+
+    /// The kind of context this descriptor describes.
+    @_transparent
+    public var kind: ContextDescriptorKind {
+        ContextDescriptorKind(rawValue: UInt8(rawValue & 0x1F)) ?? ContextDescriptorKind.opaqueType
     }
 
     /// The format version of the descriptor. Higher version numbers may have
@@ -53,15 +72,6 @@ public struct ContextDescriptorKind: OptionSet { // ContextDescriptorFlags
         contains(.unique)
     }
 
-    public static let module: ContextDescriptorKind = [] // 0
-    public static let `extension` = ContextDescriptorKind(rawValue: 1)
-    public static let anonymous = ContextDescriptorKind(rawValue: 2)
-    public static let `protocol` = ContextDescriptorKind(rawValue: 3)
-    public static let opaqueType = ContextDescriptorKind(rawValue: 4)
-    public static let typeFirst = ContextDescriptorKind(rawValue: 16)
-    public static let `class` = ContextDescriptorKind(rawValue: 16)
-    public static let `struct` = ContextDescriptorKind(rawValue: 17)
-    public static let `enum` = ContextDescriptorKind(rawValue: 18)
-    public static let generic = ContextDescriptorKind(rawValue: 0x80)
-    public static let unique = ContextDescriptorKind(rawValue: 0x40)
+    public static let generic = ContextDescriptorFlags(rawValue: 0x80)
+    public static let unique = ContextDescriptorFlags(rawValue: 0x40)
 }

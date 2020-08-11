@@ -54,12 +54,6 @@ public protocol RawTargetMetadata {
     var kind: UInt { get }
 }
 
-public protocol RawTargetValueMetadata: RawTargetMetadata {
-    // TargetSignedPointer<Runtime, const TargetValueTypeDescriptor<Runtime>* > Description;
-    //   => const TargetValueTypeDescriptor<Runtime>* Description;
-    var description: UnsafeRawPointer { get }
-}
-
 public protocol TargetMetadata: UnsafeRawRepresentable where RawValue: RawTargetMetadata {
     var kind: Metadata.Kind { get }
 }
@@ -86,6 +80,12 @@ extension TargetMetadata {
     }
 }
 
+public protocol RawTargetValueMetadata: RawTargetMetadata {
+    // const TargetValueTypeDescriptor<Runtime>* Description
+    //   => TargetSignedPointer<Runtime, const TargetValueTypeDescriptor<Runtime>* > Description
+    var description: UnsafeRawPointer { get }
+}
+
 public protocol TargetValueMetadata: TargetMetadata where RawValue: RawTargetValueMetadata {
     func asStructDescriptor() -> StructDescriptor
 }
@@ -93,6 +93,53 @@ public protocol TargetValueMetadata: TargetMetadata where RawValue: RawTargetVal
 extension TargetValueMetadata {
     public func asStructDescriptor() -> StructDescriptor {
         StructDescriptor.cast(from: rawValue.pointee.description)
+    }
+}
+
+// The common structure of all metadata for heap-allocated types.  A
+// pointer to one of these can be retrieved by loading the 'isa'
+// field of any heap object, whether it was managed by Swift or by
+// Objective-C.  However, when loading from an Objective-C object,
+// this metadata may not have the heap-metadata header, and it may
+// not be the Swift type metadata for the object's dynamic type.
+// public protocol TargetHeapMetadata: TargetMetadata {
+// }
+
+public protocol RawTargetAnyClassMetadata: RawTargetMetadata {
+    var superclass: UnsafeRawPointer { get }
+#if SWIFT_OBJC_INTEROP
+    // TargetPointer<Runtime, void> CacheData[2];
+    var cachedData1: UnsafeRawPointer { get }
+    var cachedData2: UnsafeRawPointer { get }
+    var data: UInt { get }
+#endif
+}
+
+public protocol TargetAnyClassMetadata: TargetMetadata /* TargetHeapMetadata */
+    where RawValue: RawTargetAnyClassMetadata {
+    // Note that ObjC classes does not have a metadata header.
+
+    /// The metadata for the superclass.  This is null for the root class.
+    var superclass: UnsafeRawPointer { get }
+
+    /// Is this object a valid swift type metadata?  That is, can it be
+    /// safely downcast to ClassMetadata?
+    func isTypeMetadata() -> Bool
+    func isPureObjectiveC() -> Bool
+}
+
+extension TargetAnyClassMetadata {
+    @_transparent
+    public var superclass: UnsafeRawPointer {
+        rawValue.pointee.superclass
+    }
+
+    public func isTypeMetadata() -> Bool {
+        true
+    }
+
+    public func isPureObjectiveC() -> Bool {
+        !isTypeMetadata()
     }
 }
 

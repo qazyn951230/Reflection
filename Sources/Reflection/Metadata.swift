@@ -27,21 +27,21 @@ public struct Metadata: TargetMetadata {
         self.rawValue = rawValue
     }
 
-    public var isValueMetadata: Bool {
-        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
-        return value == Metadata.Kind.struct.rawValue || value == Metadata.Kind.enum.rawValue
-    }
+//    public var isValueMetadata: Bool {
+//        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
+//        return value == Metadata.Kind.struct.rawValue || value == Metadata.Kind.enum.rawValue
+//    }
+//
+//    public var isStructMetadata: Bool {
+//        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
+//        return value == Metadata.Kind.struct.rawValue
+//    }
+//
+//    public var isEnumMetadata: Bool {
+//        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
+//        return value == Metadata.Kind.enum.rawValue
+//    }
 
-    public var isStructMetadata: Bool {
-        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
-        return value == Metadata.Kind.struct.rawValue
-    }
-
-    public var isEnumMetadata: Bool {
-        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
-        return value == Metadata.Kind.enum.rawValue
-    }
-    
     public func `as`<T>(type: T.Type) -> T where T: TargetMetadata {
         T.cast(from: rawValue)
     }
@@ -50,7 +50,7 @@ public struct Metadata: TargetMetadata {
         public let kind: UInt
     }
 
-    public static func load<T>(from type: Any.Type, as target: Metadata.Type)
+    public static func load<T>(from type: Any.Type, as target: T.Type)
         -> T? where T: TargetMetadata {
         let kind = readKind(from: type)
         switch kind {
@@ -123,6 +123,62 @@ extension Metadata {
     }
 }
 
+/// The portion of a class metadata object that is compatible with
+/// all classes, even non-Swift ones.
+public struct AnyClassMetadata: TargetAnyClassMetadata {
+    public let rawValue: UnsafePointer<RawValue>
+
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
+    }
+
+    public struct RawValue: RawTargetAnyClassMetadata {
+        public let kind: UInt
+        public let superclass: UnsafeRawPointer
+    }
+}
+
+/// The structure of all class metadata.  This structure is embedded
+/// directly within the class's heap metadata structure and therefore
+/// cannot be extended without an ABI break.
+///
+/// Note that the layout of this type is compatible with the layout of
+/// an Objective-C class.
+public struct ClassMetadata: TargetAnyClassMetadata {
+    public let rawValue: UnsafePointer<RawValue>
+
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
+    }
+
+    public struct RawValue: RawTargetAnyClassMetadata {
+        public let kind: UInt
+        public let superclass: UnsafeRawPointer
+        public let flags: UInt32 // ClassFlags
+        public let instanceAddressPoint: UInt32
+        public let instanceSize: UInt32
+        public let instanceAlignMask: UInt16
+        public let reserved: UInt16
+        public let classSize: UInt32
+        public let classAddressPoint: UInt32
+        // TargetSignedPointer<Runtime, const TargetClassDescriptor<Runtime> *> Description;
+        // => template <typename Runtime, typename T>
+        //    using TargetSignedPointer = typename Runtime::template SignedPointer<T>;
+        // => T
+        // => const TargetClassDescriptor<Runtime> *
+        public let description: UnsafeRawPointer
+        // TargetSignedPointer<Runtime, ClassIVarDestroyer *> IVarDestroyer;
+        public let ivarDestroyer: UnsafeRawPointer
+
+        // After this come the class members, laid out as follows:
+        //   - class members for the superclass (recursively)
+        //   - metadata reference for the parent, if applicable
+        //   - generic parameters for this class
+        //   - class variables (if we choose to support these)
+        //   - "tabulated" virtual methods
+    }
+}
+
 /// The common structure of metadata for structs and enums.
 public struct ValueMetadata: TargetValueMetadata {
     public let rawValue: UnsafePointer<RawValue>
@@ -132,7 +188,7 @@ public struct ValueMetadata: TargetValueMetadata {
     }
 
     public struct RawValue: RawTargetValueMetadata {
-        public let kind: UInt // From Metadata
+        public let kind: UInt
         public let description: UnsafeRawPointer
     }
 }
@@ -154,13 +210,10 @@ public struct StructMetadata: TargetValueMetadata { // TargetStructMetadata
 
     /// Get a pointer to the field offset vector, if present, or null.
     var fieldOffsets: UnsafePointer<UInt32>? {
-        let offset = description.fieldOffsetVectorOffset
-        if offset == 0 {
-            return nil
-        }
-        return rawValue.reinterpretCast(to: UInt8.self)
-            .advanced(by: Int(offset))
-            .reinterpretCast(to: UInt32.self)
+        RelativeDirectPointer.resolve(
+            any: rawValue.reinterpretCast(),
+            Int(description.fieldOffsetVectorOffset)
+        )?.reinterpretCast(to: UInt32.self)
     }
 
     public func fieldOffset(at index: Int) -> Int? {
@@ -177,7 +230,7 @@ public struct StructMetadata: TargetValueMetadata { // TargetStructMetadata
 }
 
 /// The structure of type metadata for enums.
-public struct EnumMetadata: TargetValueMetadata { // TargetStructMetadata
+public struct EnumMetadata: TargetValueMetadata { // TargetEnumDescriptor
     public typealias RawValue = ValueMetadata.RawValue
 
     public let rawValue: UnsafePointer<RawValue>
@@ -186,5 +239,32 @@ public struct EnumMetadata: TargetValueMetadata { // TargetStructMetadata
     public init(rawValue: UnsafePointer<RawValue>) {
         self.rawValue = rawValue
         description = EnumDescriptor.cast(from: rawValue.pointee.description)
+    }
+}
+
+/// The structure of existential type metadata.
+public struct ExistentialTypeMetadata: TargetMetadata { // TargetExistentialTypeMetadata
+    public let rawValue: UnsafePointer<RawValue>
+
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
+    }
+
+    public var flags: ExistentialTypeFlags {
+        ExistentialTypeFlags(rawValue.pointee.flags)
+    }
+
+    public var protocolsCount: UInt32 {
+        rawValue.pointee.protocolsCount
+    }
+
+    public func superclassConstraint() -> UnsafePointer<Metadata>? {
+        nil
+    }
+
+    public struct RawValue: RawTargetMetadata {
+        public let kind: UInt
+        public let flags: UInt32 // ExistentialTypeFlags
+        public let protocolsCount: UInt32 // NumProtocols
     }
 }

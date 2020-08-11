@@ -22,34 +22,36 @@
 
 public protocol RawTargetContextDescriptor {
     /// Flags describing the context, including its kind and format version.
-    var kind: UInt32 { get }
+    var flags: UInt32 { get }
     /// The parent context, or null if this is a top-level context.
-    var parent: UInt32 { get }
+    var parent: Int32 { get }
+    // RelativeContextPointer<Runtime> Parent
+    // => template<typename Runtime> using RelativeContextPointer =
+    //      RelativeIndirectablePointer<const TargetContextDescriptor<Runtime>, /*nullable*/ true>;
 }
 
 public protocol TargetContextDescriptor: UnsafeRawRepresentable where RawValue: RawTargetContextDescriptor {
     var kind: ContextDescriptorKind { get }
-    var parent: UInt32 { get }
+    var parent: ContextDescriptor? { get }
 }
 
 extension TargetContextDescriptor {
-    public var kind: ContextDescriptorKind {
-        ContextDescriptorKind(rawValue: rawValue.pointee.kind)
+    public var flags: ContextDescriptorFlags {
+        ContextDescriptorFlags(rawValue: rawValue.pointee.flags)
     }
 
-    @_transparent
-    public var parent: UInt32 {
-        rawValue.pointee.parent
+    public var kind: ContextDescriptorKind {
+        flags.kind
     }
 
     @_transparent
     public var isGeneric: Bool {
-        kind.isGeneric
+        flags.isGeneric
     }
 
     @_transparent
     public var isUnique: Bool {
-        kind.isUnique
+        flags.isUnique
     }
 }
 
@@ -75,23 +77,15 @@ public protocol RawTargetTypeContextDescriptor: RawTargetContextDescriptor {
 }
 
 public protocol TargetTypeContextDescriptor: TargetContextDescriptor where RawValue: RawTargetTypeContextDescriptor {
-    var name: String? { get }
+    var name: String { get }
     var accessFunction: Int32 { get }
     var fields: FieldDescriptor? { get }
     var isReflectable: Bool { get }
+//    var accessFunction: UnsafeRawPointer
+//    var typeContextDescriptorFlags: TypeContextDescriptorFlags { get}
 }
 
 extension TargetTypeContextDescriptor {
-    @_transparent
-    public var kind: ContextDescriptorKind {
-        ContextDescriptorKind(rawValue: rawValue.pointee.kind)
-    }
-
-    @_transparent
-    public var parent: UInt32 {
-        rawValue.pointee.parent
-    }
-
 //    public var name: String {
 //        let name = rawValue.pointee.name
 //        guard name != 0, let offset = MemoryLayout.offset(of: \RawValue.name) else {

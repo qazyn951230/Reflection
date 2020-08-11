@@ -27,15 +27,15 @@ typealias DNodeKind = CRDNodeKind
 
 class Demangler {
     let ref: demangler_p
-    
+
     init() {
         ref = demangler_create()
     }
-    
+
     deinit {
         demangler_free(ref)
     }
-    
+
     @discardableResult
     func createNode(kind: DNodeKind) -> DNodeRef {
         DNodeRef(ref: demangler_create_node(ref, kind))
@@ -49,9 +49,8 @@ struct DNodeRef {
 extension Demangler {
     // .../swift/stdlib/public/runtime/Demangle.cpp!swift::_buildDemanglingForContext
     static func buildDemanglingForContext<Descriptor>(context: Descriptor, demangler: Demangler)
-        where Descriptor: TargetContextDescriptor {
-    }
-    
+        where Descriptor: TargetContextDescriptor {}
+
     // .../swift/stdlib/public/runtime/Demangle.cpp!swift::_buildDemanglingForNominalType
     static func buildDemanglingForNominalType(metadata: AnyMetadata, demangler: Demangler) {
         switch metadata.kind {
@@ -63,7 +62,7 @@ extension Demangler {
         // .../swift/stdlib/public/runtime/Private.h!swift::gatherWrittenGenericArgs
         // .../swift/stdlib/public/runtime/MetadataLookup.cpp!swift::gatherWrittenGenericArgs
     }
-    
+
     static func gatherWrittenGenericArgs<Descriptor>(
         metadata: AnyMetadata, description: Descriptor, demangler: Demangler
     ) -> [AnyMetadata] where Descriptor: TargetContextDescriptor {

@@ -29,7 +29,7 @@ struct TargetGenericContextDescriptorHeader {
     var argumentsCount: UInt32 {
         UInt32(keyArgumentsCount) + UInt32(extraArgumentsCount)
     }
-    
+
     var hasArguments: Bool {
         keyArgumentsCount > 0 || extraArgumentsCount > 0
     }

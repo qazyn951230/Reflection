@@ -29,10 +29,12 @@ public protocol UnsafeRawRepresentable {
 }
 
 extension UnsafeRawRepresentable {
+    @_transparent
     static func cast<T>(from: UnsafePointer<T>) -> Self {
         Self(rawValue: from.reinterpretCast(to: RawValue.self))
     }
 
+    @_transparent
     static func cast(from: UnsafeRawPointer) -> Self {
         Self(rawValue: from.assumingMemoryBound(to: RawValue.self))
     }

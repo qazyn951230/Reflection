@@ -36,7 +36,49 @@ public struct TypeContextDescriptorKind: OptionSet { // TypeContextDescriptorFla
     public static let initialization: TypeContextDescriptorKind = []
 }
 
-struct ContextDescriptor {
+public struct ContextDescriptor: TargetContextDescriptor {
+    public let rawValue: UnsafePointer<RawValue>
+
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
+    }
+
+    public init<T>(other: T) where T: TargetContextDescriptor {
+        self = ContextDescriptor.cast(from: other.rawValue)
+    }
+
+    public var parent: ContextDescriptor? {
+        guard let address = RelativeIndirectablePointer.resolve(any: rawValue, keyPath: \RawValue.parent) else {
+            return nil
+        }
+        return ContextDescriptor.cast(from: address)
+    }
+
+    public func `as`<T>(type: T.Type) -> T where T: TargetContextDescriptor {
+        T.cast(from: rawValue)
+    }
+
+    public struct RawValue: RawTargetContextDescriptor {
+        public let flags: UInt32
+        public let parent: Int32
+    }
+
+    public static func create<T>(_ value: UnsafeRawPointer, as type: T.Type)
+        -> T? where T: TargetContextDescriptor {
+        let flags = value.reinterpretCast(to: UInt32.self).pointee
+        let kind = ContextDescriptorFlags(rawValue: flags).kind
+        switch kind {
+        case .struct:
+            return StructDescriptor.cast(from: value) as? T
+        case .enum:
+            return EnumDescriptor.cast(from: value) as? T
+        case .module:
+            return ModuleContextDescriptor.cast(from: value) as? T
+        default:
+            return ContextDescriptor.cast(from: value) as? T
+        }
+    }
+
     static func rawFields<T>(_ value: T) -> UnsafePointer<FieldDescriptor.RawValue>?
         where T: TargetTypeContextDescriptor {
         let fields = value.rawValue.pointee.fields
@@ -51,21 +93,85 @@ struct ContextDescriptor {
     }
 }
 
-// template <typename Runtime> class TargetStructDescriptor
-public struct StructDescriptor: TargetTypeContextDescriptor {
+/// Descriptor for a module context.
+public struct ModuleContextDescriptor: TargetContextDescriptor { // TargetModuleContextDescriptor
     public let rawValue: UnsafePointer<RawValue>
 
     public init(rawValue: UnsafePointer<RawValue>) {
         self.rawValue = rawValue
     }
 
-    public var name: String? {
-        let name = rawValue.pointee.name
-        guard name != 0, let offset = MemoryLayout.offset(of: \RawValue.name) else {
+    public var parent: ContextDescriptor? {
+        guard let address = RelativeIndirectablePointer.resolve(any: rawValue, keyPath: \RawValue.parent) else {
             return nil
         }
-        let c = rawValue.reinterpretCast(to: Int8.self)
-            .advanced(by: offset + Int(name))
+        return ContextDescriptor.cast(from: address)
+    }
+
+    public var name: String {
+        let c = RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.name)
+            .reinterpretCast(to: Int8.self)
+        return String(cString: c)
+    }
+
+    public struct RawValue: RawTargetContextDescriptor {
+        public let flags: UInt32
+        public let parent: Int32
+        // RelativeDirectPointer<const char, /*nullable*/ false> Name;
+        public let name: Int32
+    }
+}
+
+// public struct ClassDescriptor: TargetTypeContextDescriptor { // TargetClassDescriptor
+//    public let rawValue: UnsafePointer<RawValue>
+//
+//    public init(rawValue: UnsafePointer<RawValue>) {
+//        self.rawValue = rawValue
+//    }
+//
+//    public struct RawValue: RawTargetContextDescriptor {
+//        public let flags: UInt32
+//        public let parent: Int32
+//        // TargetRelativeDirectPointer<Runtime, const char> SuperclassType;
+//        public let superclassType: Int32
+//        /// ```c++
+//        /// union {
+//        ///     uint32_t MetadataNegativeSizeInWords;
+//        ///     TargetRelativeDirectPointer<Runtime, TargetStoredClassMetadataBounds<Runtime>>
+//        ///         ResilientMetadataBounds;
+//        /// }
+//        /// ```
+//        public let resilientMetadataBounds: UInt32
+//        /// ```c++
+//        /// union {
+//        ///     uint32_t MetadataPositiveSizeInWords;
+//        ///     ExtraClassDescriptorFlags ExtraClassFlags;
+//        /// }
+//        /// ```
+//        public let extraClassFlags: UInt32
+//        public let immediateMembersCount: UInt32
+//        public let fieldsCount: UInt32
+//        public let fieldOffsetVectorOffset: UInt32
+//    }
+// }
+
+public struct StructDescriptor: TargetTypeContextDescriptor { // TargetStructDescriptor
+    public let rawValue: UnsafePointer<RawValue>
+
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
+    }
+
+    public var parent: ContextDescriptor? {
+        guard let address = RelativeIndirectablePointer.resolve(any: rawValue, keyPath: \RawValue.parent) else {
+            return nil
+        }
+        return ContextDescriptor.cast(from: address)
+    }
+
+    public var name: String {
+        let c = RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.name)
+            .reinterpretCast(to: Int8.self)
         return String(cString: c)
     }
 
@@ -91,8 +197,8 @@ public struct StructDescriptor: TargetTypeContextDescriptor {
     }
 
     public struct RawValue: RawTargetTypeContextDescriptor {
-        public let kind: UInt32
-        public let parent: UInt32
+        public let flags: UInt32
+        public let parent: Int32
         public let name: Int32
         public let accessFunction: Int32
         public let fields: Int32
@@ -101,21 +207,23 @@ public struct StructDescriptor: TargetTypeContextDescriptor {
     }
 }
 
-// template <typename Runtime> class TargetEnumDescriptor
-public struct EnumDescriptor: TargetTypeContextDescriptor {
+public struct EnumDescriptor: TargetTypeContextDescriptor { // TargetEnumDescriptor
     public let rawValue: UnsafePointer<RawValue>
 
     public init(rawValue: UnsafePointer<RawValue>) {
         self.rawValue = rawValue
     }
 
-    public var name: String? {
-        let name = rawValue.pointee.name
-        guard name != 0, let offset = MemoryLayout.offset(of: \RawValue.name) else {
+    public var parent: ContextDescriptor? {
+        guard let address = RelativeIndirectablePointer.resolve(any: rawValue, keyPath: \RawValue.parent) else {
             return nil
         }
-        let c = rawValue.reinterpretCast(to: Int8.self)
-            .advanced(by: offset + Int(name))
+        return ContextDescriptor.cast(from: address)
+    }
+
+    public var name: String {
+        let c = RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.name)
+            .reinterpretCast(to: Int8.self)
         return String(cString: c)
     }
 
@@ -140,8 +248,8 @@ public struct EnumDescriptor: TargetTypeContextDescriptor {
     }
 
     public struct RawValue: RawTargetTypeContextDescriptor {
-        public let kind: UInt32
-        public let parent: UInt32
+        public let flags: UInt32
+        public let parent: Int32
         public let name: Int32
         public let accessFunction: Int32
         public let fields: Int32

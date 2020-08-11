@@ -20,6 +20,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <swift/ABI/Metadata.h>
+#include <iostream>
+#include "include/Reflection.h"
+
 namespace llvm {
 int EnableABIBreakingChecks = 0;
+}
+
+using namespace swift;
+
+void run(const void* value) {
+    auto metadata = reinterpret_cast<const StructMetadata*>(value);
+    std::cout << static_cast<uint32_t>(metadata->getKind()) << "\n";
+    std::cout << metadata << "\n";
+    const ContextDescriptor* description = metadata->getDescription();
+    while (description != nullptr) {
+        std::cout << static_cast<uint32_t>(description->getKind()) << "\n";
+        std::cout << description << "\n";
+        description = description->Parent;
+    }
+    std::cout << std::endl;
 }
