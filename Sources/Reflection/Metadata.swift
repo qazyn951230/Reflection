@@ -27,21 +27,6 @@ public struct Metadata: TargetMetadata {
         self.rawValue = rawValue
     }
 
-//    public var isValueMetadata: Bool {
-//        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
-//        return value == Metadata.Kind.struct.rawValue || value == Metadata.Kind.enum.rawValue
-//    }
-//
-//    public var isStructMetadata: Bool {
-//        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
-//        return value == Metadata.Kind.struct.rawValue
-//    }
-//
-//    public var isEnumMetadata: Bool {
-//        let value = UInt32(truncatingIfNeeded: rawValue.pointee.kind)
-//        return value == Metadata.Kind.enum.rawValue
-//    }
-
     public func `as`<T>(type: T.Type) -> T where T: TargetMetadata {
         T.cast(from: rawValue)
     }
@@ -54,6 +39,8 @@ public struct Metadata: TargetMetadata {
         -> T? where T: TargetMetadata {
         let kind = readKind(from: type)
         switch kind {
+        case .class:
+            return ClassMetadata.load(from: type) as? T
         case .struct:
             return StructMetadata.load(from: type) as? T
         case .enum:
@@ -135,6 +122,12 @@ public struct AnyClassMetadata: TargetAnyClassMetadata {
     public struct RawValue: RawTargetAnyClassMetadata {
         public let kind: UInt
         public let superclass: UnsafeRawPointer
+        
+        #if SWIFT_OBJC_INTEROP
+            public let  cachedData1: UnsafeRawPointer
+            public let  cachedData2: UnsafeRawPointer
+            public let  data: UInt
+        #endif
     }
 }
 
@@ -144,16 +137,25 @@ public struct AnyClassMetadata: TargetAnyClassMetadata {
 ///
 /// Note that the layout of this type is compatible with the layout of
 /// an Objective-C class.
-public struct ClassMetadata: TargetAnyClassMetadata {
+public struct ClassMetadata: TargetAnyClassMetadata { // TargetClassMetadata
     public let rawValue: UnsafePointer<RawValue>
+    public let descriptor: ClassDescriptor
 
     public init(rawValue: UnsafePointer<RawValue>) {
         self.rawValue = rawValue
+        descriptor = ClassDescriptor.cast(from: rawValue.pointee.description)
     }
 
     public struct RawValue: RawTargetAnyClassMetadata {
         public let kind: UInt
         public let superclass: UnsafeRawPointer
+        
+        #if SWIFT_OBJC_INTEROP
+            public let  cachedData1: UnsafeRawPointer
+            public let  cachedData2: UnsafeRawPointer
+            public let  data: UInt
+        #endif
+        
         public let flags: UInt32 // ClassFlags
         public let instanceAddressPoint: UInt32
         public let instanceSize: UInt32

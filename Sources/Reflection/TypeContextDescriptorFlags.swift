@@ -20,58 +20,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// FixedWidthInteger: BinaryInteger
-// static func & (lhs: Self, rhs: Self) -> Self
-// static func >> <RHS>(lhs: Self, rhs: RHS) -> Self where RHS : BinaryInteger
-public protocol FlagSet: RawRepresentable where RawValue: FixedWidthInteger {
-    var rawValue: RawValue { get mutating set }
-
-    init(rawValue: RawValue)
-
-    /// Read a single-bit flag.
-    func readBit(offset: UInt32) -> Bool
-    mutating func writeBit(_ value: Bool, offset: UInt32)
-
-    /// Read a multi-bit field.
-    func readBit<T>(offset: UInt32, width: UInt32) -> T where T: FixedWidthInteger
-    mutating func writeBit<T>(_ value: T, offset: UInt32, width: UInt32) where T: FixedWidthInteger
+public enum MetadataInitializationKind: UInt16 {
+    case none = 0
+    case single = 1
+    case foreign = 2
 }
 
-@_transparent
-private func lowMask(for width: UInt32) -> UInt32 {
-    (1 << width) - 1
-}
-
-@_transparent
-private func mask(_ offset: UInt32, width: UInt32) -> UInt32 {
-    lowMask(for: width) << offset
-}
-
-extension FlagSet {
-    public init?(rawValue: RawValue) {
-        self.init(rawValue: rawValue)
-    }
-        
-    public func readBit(offset: UInt32) -> Bool {
-        (rawValue & RawValue(mask(offset, width: 1))) != 0
-    }
-
-    public mutating func writeBit(_ value: Bool, offset: UInt32) {
-        if value {
-            rawValue |= RawValue(mask(offset, width: 1))
-        } else {
-            rawValue &= RawValue(~mask(offset, width: 1))
-        }
-    }
-
-    public func readBit<T>(offset: UInt32, width: UInt32) -> T where T: FixedWidthInteger {
-        T((rawValue >> offset) & RawValue(lowMask(for: width)))
-    }
-
-    public mutating func writeBit<T>(_ value: T, offset: UInt32, width: UInt32) where T: FixedWidthInteger {
-        rawValue = (rawValue & RawValue(~mask(offset, width: width))) |
-            RawValue(value) << offset
-    }
+/// Kinds of type metadata/protocol conformance records.
+public enum TypeReferenceKind: UInt32 {
+    /// The conformance is for a nominal type referenced directly;
+    /// getTypeDescriptor() points to the type context descriptor.
+    case directTypeDescriptor = 0x00
+    /// The conformance is for a nominal type referenced indirectly;
+    /// getTypeDescriptor() points to the type context descriptor.
+    case indirectTypeDescriptor = 0x01
+    /// The conformance is for an Objective-C class that should be looked up
+    /// by class name.
+    case directObjCClassName = 0x02
+    /// The conformance is for an Objective-C class that has no nominal type
+    /// descriptor.
+    /// getIndirectObjCClass() points to a variable that contains the pointer to
+    /// the class object, which then requires a runtime call to get metadata.
+    ///
+    /// On platforms without Objective-C interoperability, this case is
+    /// unused.
+    case indirectObjCClass = 0x03
 }
 
 /// Flags for nominal type context descriptors. These values are used as the
@@ -85,5 +58,54 @@ public struct TypeContextDescriptorFlags: FlagSet {
         self.rawValue = rawValue
     }
 
-//    public static let
+    public var metadataInitialization: MetadataInitializationKind {
+        let value: UInt16 = readBit(offset: TypeContextDescriptorFlags.metadataInitializationOffset,
+            width: TypeContextDescriptorFlags.metadataInitializationWidth)
+        return MetadataInitializationKind(rawValue: value) ?? MetadataInitializationKind.none
+    }
+
+    public var hasImportInfo: Bool {
+        readBit(offset: TypeContextDescriptorFlags.hasImportInfoOffset)
+    }
+
+    public var classHasVTable: Bool {
+        readBit(offset: TypeContextDescriptorFlags.classHasVTableOffset)
+    }
+
+    public var classHasOverrideTable: Bool {
+        readBit(offset: TypeContextDescriptorFlags.classHasOverrideTableOffset)
+    }
+
+    public var classHasResilientSuperclass: Bool {
+        readBit(offset: TypeContextDescriptorFlags.classHasResilientSuperclassOffset)
+    }
+
+    public var classAreImmediateMembersNegative: Bool {
+        readBit(offset: TypeContextDescriptorFlags.classAreImmediateMembersNegativeOffset)
+    }
+
+    public var classResilientSuperclassReferenceKind: TypeReferenceKind {
+        let value: UInt32 = readBit(offset: TypeContextDescriptorFlags.classResilientSuperclassReferenceKindOffset,
+            width: TypeContextDescriptorFlags.classResilientSuperclassReferenceKindWidth)
+        return TypeReferenceKind(rawValue: value) ?? TypeReferenceKind.directTypeDescriptor
+    }
+
+    @inline(__always)
+    private static let metadataInitializationOffset: UInt32 = 0
+    @inline(__always)
+    private static let metadataInitializationWidth: UInt32 = 2
+    @inline(__always)
+    private static let hasImportInfoOffset: UInt32 = 2
+    @inline(__always)
+    private static let classResilientSuperclassReferenceKindOffset: UInt32 = 9
+    @inline(__always)
+    private static let classResilientSuperclassReferenceKindWidth: UInt32 = 3
+    @inline(__always)
+    private static let classAreImmediateMembersNegativeOffset: UInt32 = 12
+    @inline(__always)
+    private static let classHasResilientSuperclassOffset: UInt32 = 13
+    @inline(__always)
+    private static let classHasOverrideTableOffset: UInt32 = 14
+    @inline(__always)
+    private static let classHasVTableOffset: UInt32 = 15
 }

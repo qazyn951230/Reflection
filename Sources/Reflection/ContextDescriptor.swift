@@ -64,7 +64,7 @@ public struct ContextDescriptor: TargetContextDescriptor {
     }
 
     public static func create<T>(_ value: UnsafeRawPointer, as type: T.Type)
-        -> T? where T: TargetContextDescriptor {
+            -> T? where T: TargetContextDescriptor {
         let flags = value.reinterpretCast(to: UInt32.self).pointee
         let kind = ContextDescriptorFlags(rawValue: flags).kind
         switch kind {
@@ -122,38 +122,54 @@ public struct ModuleContextDescriptor: TargetContextDescriptor { // TargetModule
     }
 }
 
-// public struct ClassDescriptor: TargetTypeContextDescriptor { // TargetClassDescriptor
-//    public let rawValue: UnsafePointer<RawValue>
-//
-//    public init(rawValue: UnsafePointer<RawValue>) {
-//        self.rawValue = rawValue
-//    }
-//
-//    public struct RawValue: RawTargetContextDescriptor {
-//        public let flags: UInt32
-//        public let parent: Int32
-//        // TargetRelativeDirectPointer<Runtime, const char> SuperclassType;
-//        public let superclassType: Int32
-//        /// ```c++
-//        /// union {
-//        ///     uint32_t MetadataNegativeSizeInWords;
-//        ///     TargetRelativeDirectPointer<Runtime, TargetStoredClassMetadataBounds<Runtime>>
-//        ///         ResilientMetadataBounds;
-//        /// }
-//        /// ```
-//        public let resilientMetadataBounds: UInt32
-//        /// ```c++
-//        /// union {
-//        ///     uint32_t MetadataPositiveSizeInWords;
-//        ///     ExtraClassDescriptorFlags ExtraClassFlags;
-//        /// }
-//        /// ```
-//        public let extraClassFlags: UInt32
-//        public let immediateMembersCount: UInt32
-//        public let fieldsCount: UInt32
-//        public let fieldOffsetVectorOffset: UInt32
-//    }
-// }
+public struct ClassDescriptor: TargetTypeContextDescriptor { // TargetClassDescriptor
+    public let rawValue: UnsafePointer<RawValue>
+
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
+    }
+
+    public var parent: ContextDescriptor? {
+        guard let address = RelativeIndirectablePointer.resolve(any: rawValue, keyPath: \RawValue.parent) else {
+            return nil
+        }
+        return ContextDescriptor.cast(from: address)
+    }
+
+    public var name: String {
+        let c = RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.name)
+            .reinterpretCast(to: Int8.self)
+        return String(cString: c)
+    }
+
+    public struct RawValue: RawTargetTypeContextDescriptor {
+        public let flags: UInt32
+        public let parent: Int32
+        public let name: Int32
+        public let accessFunction: Int32
+        public let fields: Int32
+        // TargetRelativeDirectPointer<Runtime, const char> SuperclassType;
+        public let superclassType: Int32
+        /// ```c++
+        /// union {
+        ///     uint32_t MetadataNegativeSizeInWords;
+        ///     TargetRelativeDirectPointer<Runtime, TargetStoredClassMetadataBounds<Runtime>>
+        ///         ResilientMetadataBounds;
+        /// }
+        /// ```
+        public let resilientMetadataBounds: UInt32
+        /// ```c++
+        /// union {
+        ///     uint32_t MetadataPositiveSizeInWords;
+        ///     ExtraClassDescriptorFlags ExtraClassFlags;
+        /// }
+        /// ```
+        public let extraClassFlags: UInt32
+        public let immediateMembersCount: UInt32
+        public let fieldsCount: UInt32
+        public let fieldOffsetVectorOffset: UInt32
+    }
+}
 
 public struct StructDescriptor: TargetTypeContextDescriptor { // TargetStructDescriptor
     public let rawValue: UnsafePointer<RawValue>

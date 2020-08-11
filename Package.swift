@@ -30,7 +30,8 @@ let package = Package(
         ),
         .target(
             name: "Reflection",
-            dependencies: ["CReflection"]),
+            dependencies: ["CReflection"],
+            swiftSettings: [.define("SWIFT_OBJC_INTEROP")]),
         .testTarget(
             name: "ReflectionTests",
             dependencies: ["Reflection"]),

@@ -29,6 +29,9 @@ class Foobar {
 }
 
 print(Metadata.readKind(from: Foobar.self))
+let a = ClassMetadata.load(from: Foobar.self)
+print(a.rawValue.pointee)
+print(a.descriptor.rawValue.pointee)
 
 //let t: Any.Type = Foobar.self
 //run(unsafeBitCast(t, to: UnsafeRawPointer.self))
