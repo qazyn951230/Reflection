@@ -19,3 +19,41 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+public struct AnyMetadata {
+    private let box: _AnyMetadataBox
+
+    public init<T>(_ value: T) where T: TargetMetadata {
+        box = _AnyMetadata<T>(value)
+    }
+
+    public var kind: Metadata.Kind {
+        box.kind
+    }
+
+    public func `as`<T>(_ type: T.Type) -> T? where T: TargetMetadata {
+        box.as(type)
+    }
+}
+
+private protocol _AnyMetadataBox {
+    var kind: Metadata.Kind { get }
+
+    func `as`<T>(_ type: T.Type) -> T? where T: TargetMetadata
+}
+
+private final class _AnyMetadata<T>: _AnyMetadataBox where T: TargetMetadata {
+    let value: T
+
+    init(_ value: T) {
+        self.value = value
+    }
+
+    var kind: Metadata.Kind {
+        value.kind
+    }
+
+    func `as`<T>(_ type: T.Type) -> T? where T: TargetMetadata {
+        value as? T
+    }
+}

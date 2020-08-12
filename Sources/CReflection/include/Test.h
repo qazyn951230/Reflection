@@ -19,3 +19,17 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+#ifndef REFLECTION_TEST_H
+#define REFLECTION_TEST_H
+
+#include "Config.h"
+
+SP_C_FILE_BEGIN
+
+void test_print_all_kind(const void* value);
+void test_print_generic_context(const void* value);
+
+SP_C_FILE_END
+
+#endif //REFLECTION_TEST_H

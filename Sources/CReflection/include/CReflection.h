@@ -19,3 +19,15 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+#ifndef REFLECTION_CREFLECTION_H
+#define REFLECTION_CREFLECTION_H
+
+#include "Config.h"
+#include "CRDNodeKind.h"
+#include "Demangler.h"
+#include "Reflection.h"
+#include "Test.h"
+#include "Types.h"
+
+#endif // REFLECTION_CREFLECTION_H

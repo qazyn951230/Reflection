@@ -19,3 +19,31 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+public enum GenericRequirementKind: UInt8 {
+    case `protocol` = 0
+    case sameType = 1
+    case baseClass = 2
+    case sameConformance = 3
+    case layout = 0x1F
+
+    @_transparent
+    fileprivate static func create(_ rawValue: UInt32) -> GenericRequirementKind {
+        GenericRequirementKind(rawValue: UInt8(rawValue)) ?? .layout
+    }
+}
+
+public struct GenericRequirementFlags: OptionSet {
+    public let rawValue: UInt32
+
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+
+    public var kind: GenericRequirementKind {
+        GenericRequirementKind.create(rawValue & 0x1F)
+    }
+
+    public static let keyArgument = GenericRequirementFlags(rawValue: 0x80)
+    public static let extraArgument = GenericRequirementFlags(rawValue: 0x40)
+}

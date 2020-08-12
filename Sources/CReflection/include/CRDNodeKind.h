@@ -31,6 +31,8 @@
 #include <stdint.h>
 #endif // (__cplusplus)
 
+SP_C_FILE_BEGIN
+
 typedef SP_ENUM(uint16_t, CRDNodeKind) {
     CRDNodeKindAllocator,
     CRDNodeKindAnonymousContext,
@@ -290,5 +292,7 @@ typedef SP_ENUM(uint16_t, CRDNodeKind) {
     CRDNodeKindOpaqueReturnType,
     CRDNodeKindOpaqueReturnTypeOf,
 };
+
+SP_C_FILE_END
 
 #endif //REFLECTION_CRDNODEKIND_H

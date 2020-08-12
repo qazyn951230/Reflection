@@ -20,52 +20,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyMetadata {
-    private let box: _AnyMetadataBox
+public struct GenericParamKind: RawRepresentable {
+    public let rawValue: UInt8
 
-    public init<T>(_ value: T) where T: TargetMetadata {
-        box = _AnyMetadata<T>(value)
+    public init(rawValue: UInt8) {
+        self.rawValue = rawValue
     }
 
-    public var kind: Metadata.Kind {
-        box.kind
-    }
-
-    public var isValueMetadata: Bool {
-        kind == .struct || kind == .enum
-    }
-
-    public var isStructMetadata: Bool {
-        kind == .struct
-    }
-
-    public var isEnumMetadata: Bool {
-        kind == .enum
-    }
-
-    public func `as`<T>(type: T.Type) -> T? where T: TargetMetadata {
-        box.as(type: type)
-    }
+    public static let type = GenericParamKind(rawValue: 0x0)
+    public static let max = GenericParamKind(rawValue: 0x3F)
 }
 
-private protocol _AnyMetadataBox {
-    var kind: Metadata.Kind { get }
+public struct GenericParamDescriptor: OptionSet {
+    public let rawValue: UInt8
 
-    func `as`<T>(type: T.Type) -> T? where T: TargetMetadata
-}
-
-private final class _AnyMetadata<T>: _AnyMetadataBox where T: TargetMetadata {
-    let value: T
-
-    init(_ value: T) {
-        self.value = value
+    public init(rawValue: UInt8) {
+        self.rawValue = rawValue
     }
 
-    var kind: Metadata.Kind {
-        value.kind
+    public var kind: GenericParamKind {
+        GenericParamKind(rawValue: rawValue & GenericParamKind.max.rawValue)
     }
 
-    func `as`<T>(type: T.Type) -> T? where T: TargetMetadata {
-        value as? T
-    }
+    public static let keyArgument = GenericParamDescriptor(rawValue: 0x80)
+    public static let extraArgument = GenericParamDescriptor(rawValue: 0x40)
 }

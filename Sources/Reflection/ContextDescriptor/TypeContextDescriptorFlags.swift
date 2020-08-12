@@ -60,7 +60,7 @@ public struct TypeContextDescriptorFlags: FlagSet {
 
     public var metadataInitialization: MetadataInitializationKind {
         let value: UInt16 = readBit(offset: TypeContextDescriptorFlags.metadataInitializationOffset,
-            width: TypeContextDescriptorFlags.metadataInitializationWidth)
+                                    width: TypeContextDescriptorFlags.metadataInitializationWidth)
         return MetadataInitializationKind(rawValue: value) ?? MetadataInitializationKind.none
     }
 
@@ -86,7 +86,7 @@ public struct TypeContextDescriptorFlags: FlagSet {
 
     public var classResilientSuperclassReferenceKind: TypeReferenceKind {
         let value: UInt32 = readBit(offset: TypeContextDescriptorFlags.classResilientSuperclassReferenceKindOffset,
-            width: TypeContextDescriptorFlags.classResilientSuperclassReferenceKindWidth)
+                                    width: TypeContextDescriptorFlags.classResilientSuperclassReferenceKindWidth)
         return TypeReferenceKind(rawValue: value) ?? TypeReferenceKind.directTypeDescriptor
     }
 

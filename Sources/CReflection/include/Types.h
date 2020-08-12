@@ -33,10 +33,6 @@
 
 #include "Config.h"
 
-SP_EXTERN_C_BEGIN
-
-SP_EXTERN_C_END
-
 SP_C_FILE_BEGIN
 
 SP_OPAQUE_POINTER(demangler);

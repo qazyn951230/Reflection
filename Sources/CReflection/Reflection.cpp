@@ -20,9 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <swift/ABI/Metadata.h>
-#include <iostream>
+#include <swift/Runtime/Metadata.h>
 #include "include/Reflection.h"
+
+// This file contains some fake function.
 
 extern "C" unsigned long long _swift_classIsSwiftMask = 2;
 
@@ -30,20 +31,13 @@ namespace llvm {
 int EnableABIBreakingChecks = 0;
 }
 
-using namespace swift;
+namespace swift {
+ClassMetadataBounds getResilientMetadataBounds(const ClassDescriptor* descriptor) {
+    return {};
+}
+}
 
-void run(const void* value) {
-    auto metadata = reinterpret_cast<const ClassMetadata*>(value);
-    std::cout << static_cast<uint32_t>(metadata->getKind()) << "\n";
-    std::cout << metadata << "\n";
-    auto description = metadata->getDescription();
-    std::cout << static_cast<uint32_t>(description->getKind()) << "\n";
-    std::cout << description << "\n";
-//    const ContextDescriptor* description = metadata->getDescription();
-//    while (description != nullptr) {
-//        std::cout << static_cast<uint32_t>(description->getKind()) << "\n";
-//        std::cout << description << "\n";
-//        description = description->Parent;
-//    }
-    std::cout << std::endl;
+SWIFT_RUNTIME_EXPORT
+Class swift_getInitializedObjCClass(Class c) {
+    return c;
 }

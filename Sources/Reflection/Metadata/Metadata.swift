@@ -27,7 +27,11 @@ public struct Metadata: TargetMetadata {
         self.rawValue = rawValue
     }
 
-    public func `as`<T>(type: T.Type) -> T where T: TargetMetadata {
+    public func cast<T>() -> T where T: TargetMetadata {
+        T.cast(from: rawValue)
+    }
+
+    public func `as`<T>(_ type: T.Type) -> T where T: TargetMetadata {
         T.cast(from: rawValue)
     }
 
@@ -53,6 +57,36 @@ public struct Metadata: TargetMetadata {
     public static func readKind(from type: Any.Type) -> Kind {
         let raw = unsafeBitCast(type, to: UnsafePointer<UInt>.self)
         return Metadata.Kind.create(raw.pointee)
+    }
+}
+
+extension Metadata: Equatable {
+    public static func == (lhs: Metadata, rhs: Metadata) -> Bool {
+        lhs.rawValue == rhs.rawValue
+    }
+
+    public static func == <T>(lhs: Metadata, rhs: T.Type) -> Bool {
+        lhs.rawValue == unsafeBitCast(rhs as Any.Type, to: UnsafePointer<Metadata.RawValue>.self)
+    }
+
+    public static func == <T>(lhs: T.Type, rhs: Metadata) -> Bool {
+        unsafeBitCast(lhs as Any.Type, to: UnsafePointer<Metadata.RawValue>.self) == rhs.rawValue
+    }
+
+    public static func ~= <T>(pattern: T.Type, value: Metadata) -> Bool {
+        value.rawValue == unsafeBitCast(pattern as Any.Type, to: UnsafePointer<Metadata.RawValue>.self)
+    }
+
+    public static func == (lhs: Metadata, rhs: Any.Type) -> Bool {
+        lhs.rawValue == unsafeBitCast(rhs, to: UnsafePointer<Metadata.RawValue>.self)
+    }
+
+    public static func == (lhs: Any.Type, rhs: Metadata) -> Bool {
+        unsafeBitCast(lhs, to: UnsafePointer<Metadata.RawValue>.self) == rhs.rawValue
+    }
+
+    public static func ~= (pattern: Any.Type, value: Metadata) -> Bool {
+        value.rawValue == unsafeBitCast(pattern, to: UnsafePointer<Metadata.RawValue>.self)
     }
 }
 
@@ -122,12 +156,12 @@ public struct AnyClassMetadata: TargetAnyClassMetadata {
     public struct RawValue: RawTargetAnyClassMetadata {
         public let kind: UInt
         public let superclass: UnsafeRawPointer
-        
-        #if SWIFT_OBJC_INTEROP
-            public let  cachedData1: UnsafeRawPointer
-            public let  cachedData2: UnsafeRawPointer
-            public let  data: UInt
-        #endif
+
+#if SWIFT_OBJC_INTEROP
+        public let cachedData1: UnsafeRawPointer
+        public let cachedData2: UnsafeRawPointer
+        public let data: UInt
+#endif
     }
 }
 
@@ -139,23 +173,23 @@ public struct AnyClassMetadata: TargetAnyClassMetadata {
 /// an Objective-C class.
 public struct ClassMetadata: TargetAnyClassMetadata { // TargetClassMetadata
     public let rawValue: UnsafePointer<RawValue>
-    public let descriptor: ClassDescriptor
+    public let description: ClassDescriptor
 
     public init(rawValue: UnsafePointer<RawValue>) {
         self.rawValue = rawValue
-        descriptor = ClassDescriptor.cast(from: rawValue.pointee.description)
+        description = ClassDescriptor.cast(from: rawValue.pointee.description)
     }
 
     public struct RawValue: RawTargetAnyClassMetadata {
         public let kind: UInt
         public let superclass: UnsafeRawPointer
-        
-        #if SWIFT_OBJC_INTEROP
-            public let  cachedData1: UnsafeRawPointer
-            public let  cachedData2: UnsafeRawPointer
-            public let  data: UInt
-        #endif
-        
+
+#if SWIFT_OBJC_INTEROP
+        public let cachedData1: UnsafeRawPointer
+        public let cachedData2: UnsafeRawPointer
+        public let data: UInt
+#endif
+
         public let flags: UInt32 // ClassFlags
         public let instanceAddressPoint: UInt32
         public let instanceSize: UInt32

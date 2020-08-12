@@ -19,3 +19,38 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+// TargetGenericContextDescriptorHeader
+public struct GenericContextDescriptorHeader: TrailingGenericHeader {
+    public let parametersCount: UInt16
+    public let requirementsCount: UInt16
+    public let keyArgumentsCount: UInt16
+    public let extraArgumentsCount: UInt16
+
+    public var base: GenericContextDescriptorHeader {
+        self
+    }
+}
+
+// TargetTypeGenericContextDescriptorHeader
+public struct TypeGenericContextDescriptorHeader: TrailingGenericHeader {
+    public let instantiationCache: Int32
+    public let defaultInstantiationPattern: Int32
+    public let base: GenericContextDescriptorHeader
+
+    public var parametersCount: UInt16 {
+        base.parametersCount
+    }
+
+    public var requirementsCount: UInt16 {
+        base.requirementsCount
+    }
+
+    public var keyArgumentsCount: UInt16 {
+        base.keyArgumentsCount
+    }
+
+    public var extraArgumentsCount: UInt16 {
+        base.extraArgumentsCount
+    }
+}

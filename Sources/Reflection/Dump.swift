@@ -73,7 +73,14 @@ private func _dump(_ value: Any, to stream: inout StandardOutput, name: String?,
 // .../swift/stdlib/public/core/OutputStream.swift!_dumpPrint_unlocked
 @_semantics("optimize.sil.specialize.generic.never")
 private func _dumpSelf(_ value: Any, _ reflection: Reflection, to stream: inout StandardOutput) {
-    stream.write(_typeName(type(of: value)))
+    let type: Any.Type = Swift.type(of: value)
+    let kind = Metadata.readKind(from: type)
+    switch kind {
+    case .class, .struct:
+        stream.write(_typeName(type, kind: kind))
+    default:
+        break
+    }
 }
 
 // `_typeName` call stack:
@@ -89,28 +96,34 @@ private func _dumpSelf(_ value: Any, _ reflection: Reflection, to stream: inout 
 // .../swift/lib/Demangling/NodePrinter.cpp!Demangle::nodeToString
 // .../swift/lib/Demangling/NodePrinter.cpp!NodePrinter::printRoot
 // .../swift/lib/Demangling/NodePrinter.cpp!NodePrinter::print(NodePointer, bool/*asPrefixContext = false*/)
-private func _typeName(_ type: Any.Type, qualified: Bool = true) -> String {
-    let kind = Metadata.readKind(from: type)
+private func _typeName(_ type: Any.Type, kind: Metadata.Kind, qualified: Bool = true) -> String {
     switch kind {
     case .struct:
         return _typeName(struct: StructMetadata.load(from: type), qualified: qualified)
+    case .class:
+        return _typeName(class: ClassMetadata.load(from: type), qualified: qualified)
     default:
         return ""
     }
 }
 
 private func _typeName(struct value: StructMetadata, qualified: Bool) -> String {
-    guard qualified else {
-        return value.description.name
-    }
+    qualified ? _qualifiedTypeName(value.description) : value.description.name
+}
+
+private func _typeName(class value: ClassMetadata, qualified: Bool) -> String {
+    qualified ? _qualifiedTypeName(value.description) : value.description.name
+}
+
+private func _qualifiedTypeName<T>(_ description: T) -> String where T: TargetContextDescriptor {
     var names: [String] = []
-    var i: ContextDescriptor? = ContextDescriptor(other: value.description)
+    var i: ContextDescriptor? = ContextDescriptor(other: description)
     while let t = i {
         switch t.kind {
         case .struct:
-            names.append(t.as(type: StructDescriptor.self).name)
+            names.append(t.as(StructDescriptor.self).name)
         case .module:
-            names.append(t.as(type: ModuleContextDescriptor.self).name)
+            names.append(t.as(ModuleContextDescriptor.self).name)
         default:
             break
         }

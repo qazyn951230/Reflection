@@ -54,7 +54,7 @@ public struct ContextDescriptor: TargetContextDescriptor {
         return ContextDescriptor.cast(from: address)
     }
 
-    public func `as`<T>(type: T.Type) -> T where T: TargetContextDescriptor {
+    public func `as`<T>(_ type: T.Type) -> T where T: TargetContextDescriptor {
         T.cast(from: rawValue)
     }
 
@@ -64,7 +64,7 @@ public struct ContextDescriptor: TargetContextDescriptor {
     }
 
     public static func create<T>(_ value: UnsafeRawPointer, as type: T.Type)
-            -> T? where T: TargetContextDescriptor {
+        -> T? where T: TargetContextDescriptor {
         let flags = value.reinterpretCast(to: UInt32.self).pointee
         let kind = ContextDescriptorFlags(rawValue: flags).kind
         switch kind {
@@ -171,7 +171,10 @@ public struct ClassDescriptor: TargetTypeContextDescriptor { // TargetClassDescr
     }
 }
 
-public struct StructDescriptor: TargetTypeContextDescriptor { // TargetStructDescriptor
+// TargetStructDescriptor
+public struct StructDescriptor: TargetTypeContextDescriptor, TrailingGenericContainer {
+    public typealias Header = TypeGenericContextDescriptorHeader
+
     public let rawValue: UnsafePointer<RawValue>
 
     public init(rawValue: UnsafePointer<RawValue>) {

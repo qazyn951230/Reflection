@@ -92,7 +92,7 @@ private class ReflectionBox {
         let data = Metadata.load(from: type)
         switch data.kind {
         case .struct:
-            return StructReflection(metadata: data.as(type: StructMetadata.self))
+            return StructReflection(metadata: data.cast())
         default:
             return ReflectionBox()
         }

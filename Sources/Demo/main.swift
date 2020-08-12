@@ -22,44 +22,85 @@
 
 import Reflection
 import CReflection
-// import QuartzCore
+import SwiftUI
 
-class Foobar {
-    let value: Int = 12
+struct Foobar {
+    let value = 12
 }
 
-print(Metadata.readKind(from: Foobar.self))
-let a = ClassMetadata.load(from: Foobar.self)
-print(a.rawValue.pointee)
-print(a.descriptor.rawValue.pointee)
+//let a: [Any.Type] = [Int.self, Foobar.self, String.self]
+//
+//for t in a {
+//    switch Metadata.load(from: t) {
+//    case Int.self:
+//        print("Int")
+//    case Foobar.self:
+//        print("Foobar")
+//    default:
+//        print("Any")
+//    }
+//}
 
-//let t: Any.Type = Foobar.self
-//run(unsafeBitCast(t, to: UnsafeRawPointer.self))
+let text = Text("Foobar")
+    .offset(CGSize.zero)
 
-//let metadata = StructMetadata.load(from: Foobar.self)
+let t: Any.Type = type(of: text)
+//test_print_all_kind(unsafeBitCast(t, to: UnsafeRawPointer.self))
+test_print_generic_context(unsafeBitCast(t, to: UnsafeRawPointer.self))
+
+// test_print_all_kind
+//let metadata = StructMetadata.load(from: t)
+//print(metadata.kind)
+////print(metadata.description.kind)
 //var d: ContextDescriptor? = ContextDescriptor(other: metadata.description)
 //while let t = d {
 //    print(t.kind)
 //    d = d?.parent
 //}
 
-//let bar = Foobar(value: 12)
-//Swift.dump(bar)
-////▿ Demo.Foobar
-////- value: 12
-//
-//// CustomDebugStringConvertible
-//Swift.dump(CGSize.zero)
-////▿ (0.0, 0.0)
-////- width: 0.0
-////- height: 0.0
-//
-//// CustomStringConvertible & CustomDebugStringConvertible
-//Swift.dump(Array(repeating: 2, count: 2))
-////▿ 2 elements
-////- 2
-////- 2
+// test_print_generic_context
+let metadata = StructMetadata.load(from: t)
+let descriptor = metadata.description
+let header: UnsafePointer<StructDescriptor.Header> = descriptor.trailingObjects()
+print(header)
+print(header.pointee.base)
+
+//Swift.dump(text)
+//▿ SwiftUI.ModifiedContent<SwiftUI.Text, SwiftUI._OffsetEffect>
+//▿ content: SwiftUI.Text
+//  ▿ storage: SwiftUI.Text.Storage.anyTextStorage
+//    ▿ anyTextStorage: SwiftUI.(unknown context at $7fff43ee9c28).LocalizedTextStorage #0
+//      - super: SwiftUI.AnyTextStorage
+//      ▿ key: SwiftUI.LocalizedStringKey
+//        - key: "Foobar"
+//        - hasFormatting: false
+//        - arguments: 0 elements
+//      - table: nil
+//      - bundle: nil
+//  - modifiers: 0 elements
+//▿ modifier: SwiftUI._OffsetEffect
+//  ▿ offset: (0.0, 0.0)
+//    - width: 0.0
+//    - height: 0.0
 
 //print("--------")
 
 //dump(bar)
+
+// https://unicode-table.com/en/blocks/box-drawing/
+//SwiftUI.ModifiedContent<SwiftUI.Text, SwiftUI._OffsetEffect>
+//├┬ content: SwiftUI.Text
+//│├──┬ storage: SwiftUI.Text.Storage.anyTextStorage
+//││  └──┬ anyTextStorage: SwiftUI.(unknown context at $7fff43ee9c28).LocalizedTextStorage #0
+//││     ┝━━━ super: SwiftUI.AnyTextStorage
+//││     ├──┬ key: SwiftUI.LocalizedStringKey
+//││     │  ├─── key: "Foobar"
+//││     │  ├─── hasFormatting: false
+//││     │  └─── arguments: 0 elements
+//││     ├─── table: nil
+//││     └─── bundle: nil
+//│└── modifiers: 0 elements
+//└┬ modifier: SwiftUI._OffsetEffect
+// └──┬ offset: (0.0, 0.0)
+//    ├─── width: 0.0
+//    └─── height: 0.0
