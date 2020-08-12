@@ -62,13 +62,14 @@ void test_print_generic_context(const void* value) {
         std::cout << "Not generic type\n";
         return;
     }
-    auto& header = description->getGenericContextHeader();
-    std::cout << &header << "\n";
-    std::cout << header.NumParams << ", "
-        << header.NumRequirements << ", "
-        << header.NumKeyArguments << ", "
-        << header.NumExtraArguments;
-//    auto generics = description->getGenericContext();
+//    auto& header = description->getGenericContextHeader();
+//    std::cout << &header << "\n";
+//    std::cout << header.NumParams << ", " <<
+//        header.NumRequirements << ", " <<
+//        header.NumKeyArguments << ", " <<
+//        header.NumExtraArguments;
+    auto generics = description->getGenericContext();
+    std::cout << generics << "\n";
 //    auto genericArgs = description->getGenericArguments(metadata);
 //    for (auto& param: generics->getGenericParams()) {
 //        std::cout << static_cast<uint32_t>(param.getKind()) << "\n";

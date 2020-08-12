@@ -61,9 +61,12 @@ test_print_generic_context(unsafeBitCast(t, to: UnsafeRawPointer.self))
 // test_print_generic_context
 let metadata = StructMetadata.load(from: t)
 let descriptor = metadata.description
-let header: UnsafePointer<StructDescriptor.Header> = descriptor.trailingObjects()
-print(header)
-print(header.pointee.base)
+//let header = descriptor.trailingObjects(as: StructDescriptor.Header.self)
+//print(header)
+//print(header.pointee.base)
+if let context = descriptor.genericContext() {
+    print(context.rawValue)
+}
 
 //Swift.dump(text)
 //▿ SwiftUI.ModifiedContent<SwiftUI.Text, SwiftUI._OffsetEffect>

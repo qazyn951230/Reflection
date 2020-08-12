@@ -55,6 +55,19 @@ extension TargetContextDescriptor {
     }
 }
 
+extension TargetContextDescriptor where Self: TrailingGenericContainer {
+    public func genericContext() -> GenericContext? {
+        guard isGeneric else {
+            return nil
+        }
+        let header = self.trailingObjects(as: Self.Header.self)
+        let raw = UnsafeRawPointer(bitPattern:
+            UInt(bitPattern: header) - UInt(MemoryLayout<GenericContext.RawValue>.size)
+        ).unsafelyUnwrapped
+        return GenericContext.cast(from: raw)
+    }
+}
+
 public protocol RawTargetTypeContextDescriptor: RawTargetContextDescriptor {
     // TargetRelativeDirectPointer<Runtime, const char, /*nullable*/ false> Name;
     // => RelativeDirectPointer<const char, false>

@@ -20,24 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <swift/Runtime/Metadata.h>
-#include "include/Reflection.h"
+// TargetGenericContext
+public struct GenericContext: UnsafeRawRepresentable, TrailingGenericContainer {
+    public let rawValue: UnsafePointer<RawValue>
 
-// This file contains some fake functions.
-
-extern "C" unsigned long long _swift_classIsSwiftMask = 2;
-
-namespace llvm {
-int EnableABIBreakingChecks = 0;
-}
-
-namespace swift {
-ClassMetadataBounds getResilientMetadataBounds(const ClassDescriptor* descriptor) {
-    return {};
-}
-}
-
-SWIFT_RUNTIME_EXPORT
-Class swift_getInitializedObjCClass(Class c) {
-    return c;
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
+    }
+    
+    public struct RawValue {
+        let dummy: UInt32
+    }
 }

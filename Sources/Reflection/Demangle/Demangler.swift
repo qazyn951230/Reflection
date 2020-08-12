@@ -66,7 +66,7 @@ extension Demangler {
     static func gatherWrittenGenericArgs<Descriptor>(
         metadata: AnyMetadata, description: Descriptor, demangler: Demangler
     ) -> [AnyMetadata] where Descriptor: TargetContextDescriptor {
-        // .../include/swift/ABI/Metadata.h!TypeContextDescriptor::getGenericContext
+        // .../include/swift/ABI/Metadata.h!TargetTypeContextDescriptor<InProcess>::getGenericContext
         return []
     }
 }

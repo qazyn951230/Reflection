@@ -40,30 +40,30 @@ extension TrailingGenericHeader {
 }
 
 // TrailingGenericContextObjects
-public protocol TrailingGenericContainer: TargetContextDescriptor, TrailingContainer {
-    associatedtype Header: TrailingGenericHeader
+public protocol TrailingGenericContainer: TrailingContainer {
+    associatedtype Header: TrailingGenericHeader = GenericContextDescriptorHeader
 
-    var followingTrailingTypes: [Any.Type] { get }
+    static var followingTrailingTypes: [Any.Type] { get }
 
-    func followingTrailingObjectsSize(of metadata: Metadata) -> Int
-    func followingTrailingObjectsCount(of metadata: Metadata) -> Int
-    func followingTrailingObjectsAlignment(of metadata: Metadata) -> Int
+    static func followingTrailingObjectsSize(of metadata: Metadata) -> Int
+    static func followingTrailingObjectsCount(of metadata: Metadata) -> Int
+    static func followingTrailingObjectsAlignment(of metadata: Metadata) -> Int
 
     func genericContextHeader() -> GenericContextDescriptorHeader
     func fullGenericContextHeader() -> Header
 }
 
 extension TrailingGenericContainer {
-    public var trailingTypes: [Any.Type] {
+    public static var trailingTypes: [Any.Type] {
         var all: [Any.Type] = [Header.self, GenericParamDescriptor.self,
                                GenericRequirementDescriptor.self]
         all.append(contentsOf: followingTrailingTypes)
         return all
     }
 
-    public var followingTrailingTypes: [Any.Type] { [] }
+    public static var followingTrailingTypes: [Any.Type] { [] }
 
-    public func trailingObjectsSize(of metadata: Metadata) -> Int {
+    public static func trailingObjectsSize(of metadata: Metadata) -> Int {
         switch metadata {
         case Header.self:
             return MemoryLayout<Header>.size
@@ -72,20 +72,17 @@ extension TrailingGenericContainer {
         }
     }
 
-    public func trailingObjectsCount(of metadata: Metadata) -> Int {
+    public static func trailingObjectsCount(of metadata: Metadata) -> Int {
         switch metadata {
-        case Header.self:
-            return isGeneric ? 1 : 0
-        case GenericParamDescriptor.self:
-            return 0
-        case GenericRequirementDescriptor.self:
+        case Header.self, GenericParamDescriptor.self,
+             GenericRequirementDescriptor.self:
             return 0
         default:
             return followingTrailingObjectsCount(of: metadata)
         }
     }
 
-    public func trailingObjectsAlignment(of metadata: Metadata) -> Int {
+    public static func trailingObjectsAlignment(of metadata: Metadata) -> Int {
         switch metadata {
         case Header.self:
             return MemoryLayout<Header>.alignment
@@ -94,17 +91,17 @@ extension TrailingGenericContainer {
         }
     }
 
-    public func followingTrailingObjectsSize(of metadata: Metadata) -> Int {
+    public static func followingTrailingObjectsSize(of metadata: Metadata) -> Int {
         assert(followingTrailingTypes.isEmpty)
         return 0
     }
 
-    public func followingTrailingObjectsCount(of metadata: Metadata) -> Int {
+    public static func followingTrailingObjectsCount(of metadata: Metadata) -> Int {
         assert(followingTrailingTypes.isEmpty)
         return 0
     }
 
-    public func followingTrailingObjectsAlignment(of metadata: Metadata) -> Int {
+    public static func followingTrailingObjectsAlignment(of metadata: Metadata) -> Int {
         assert(followingTrailingTypes.isEmpty)
         return 0
     }
@@ -116,5 +113,20 @@ extension TrailingGenericContainer {
     public func fullGenericContextHeader() -> Header {
         let header: UnsafePointer<Header> = trailingObjects()
         return header.pointee
+    }
+}
+
+extension TrailingGenericContainer where Self: TargetContextDescriptor {
+    public func trailingObjectsCount(of metadata: Metadata) -> Int {
+        switch metadata {
+        case Header.self:
+            return isGeneric ? 1 : 0
+        case GenericParamDescriptor.self:
+            return 0
+        case GenericRequirementDescriptor.self:
+            return 0
+        default:
+            return Self.followingTrailingObjectsCount(of: metadata)
+        }
     }
 }
