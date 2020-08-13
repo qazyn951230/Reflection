@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#if ENABLE_REFLECTION_DEMANGLE
+
 @_implementationOnly import CReflection
 
 // SPM did not honor "CReflection.apinotes"
@@ -65,8 +67,45 @@ extension Demangler {
 
     static func gatherWrittenGenericArgs<Descriptor>(
         metadata: AnyMetadata, description: Descriptor, demangler: Demangler
-    ) -> [AnyMetadata] where Descriptor: TargetContextDescriptor {
+    ) -> [Metadata?] where Descriptor: TargetGenericContainer {
         // .../include/swift/ABI/Metadata.h!TargetTypeContextDescriptor<InProcess>::getGenericContext
-        return []
+        guard let generics = description.genericContext(),
+            let parameters = generics.genericParameters() else {
+            return []
+        }
+        var missingWrittenArguments = false
+        var result: [Metadata?] = []
+        var args = description.genericArguments(of: metadata)
+        for parameter in parameters {
+            if parameter.kind == .type {
+                if parameter.contains(.keyArgument) {
+                    let arg = args.pointee
+                    args += 1
+                    result.append(Metadata(rawValue: arg))
+                } else {
+                    result.append(nil)
+                    missingWrittenArguments = true
+                }
+                if parameter.contains(.extraArgument) {
+                    result.append(nil)
+                    args += 1
+                }
+            } else {
+                if parameter.contains(.keyArgument) {
+                    result.append(nil)
+                    args += 1
+                }
+                if parameter.contains(.extraArgument) {
+                    result.append(nil)
+                    args += 1
+                }
+            }
+        }
+        guard missingWrittenArguments else {
+            return result
+        }
+        return result
     }
 }
+
+#endif // ENABLE_REFLECTION_DEMANGLE

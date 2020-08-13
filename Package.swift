@@ -3,6 +3,17 @@
 
 import PackageDescription
 
+let enableDemangle = false
+let demangle: SwiftSetting = enableDemangle ?
+    .define("ENABLE_REFLECTION_DEMANGLE") :
+    .define("DISABLE_REFLECTION_DEMANGLE")
+let dependencies: [Target.Dependency] =
+    enableDemangle ? ["CReflection"] : []
+let settings: [SwiftSetting] = [
+    .define("SWIFT_OBJC_INTEROP"),
+    demangle
+]
+
 let package = Package(
     name: "Reflection",
     platforms: [.macOS("10.15")],
@@ -31,14 +42,15 @@ let package = Package(
         ),
         .target(
             name: "Reflection",
-            dependencies: ["CReflection"],
-            swiftSettings: [.define("SWIFT_OBJC_INTEROP")]),
+            dependencies: dependencies,
+            swiftSettings: settings
+        ),
         .testTarget(
             name: "ReflectionTests",
             dependencies: ["Reflection"]),
         .target(
             name: "Demo",
-            dependencies: ["Reflection"]),
+            dependencies: ["Reflection", "CReflection"]),
     ],
     cxxLanguageStandard: .cxx1z
 )

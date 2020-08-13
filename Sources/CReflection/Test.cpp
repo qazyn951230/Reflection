@@ -49,7 +49,7 @@ void test_print_all_kind(const void* value) {
         default:
             break;
     }
-    std::cout << std::endl;
+    std::cout << std::flush;
 }
 
 void test_print_generic_context(const void* value) {
@@ -58,27 +58,52 @@ void test_print_generic_context(const void* value) {
         return;
     }
     auto description = metadata->getDescription();
+//    std::cout << "description-> " << description << "\n";
     if (!description->isGeneric()) {
         std::cout << "Not generic type\n";
         return;
     }
 //    auto& header = description->getGenericContextHeader();
-//    std::cout << &header << "\n";
+//    std::cout << "header-> " << &header << "\n";
 //    std::cout << header.NumParams << ", " <<
 //        header.NumRequirements << ", " <<
 //        header.NumKeyArguments << ", " <<
 //        header.NumExtraArguments;
     auto generics = description->getGenericContext();
-    std::cout << generics << "\n";
-//    auto genericArgs = description->getGenericArguments(metadata);
-//    for (auto& param: generics->getGenericParams()) {
-//        std::cout << static_cast<uint32_t>(param.getKind()) << "\n";
-//        if (param.getKind() == GenericParamKind::Type) {
-//            printMetadataName(*genericArgs);
-//        }
-//        genericArgs += 1;
-//    }
-    std::cout << std::endl;
+    std::cout << "genericContext-> " << generics << "\n";
+    auto genericArgs = description->getGenericArguments(metadata);
+    std::cout << "genericArgs-> " << genericArgs << "\n";
+    for (auto& param: generics->getGenericParams()) {
+        std::cout << static_cast<uint32_t>(param.getKind()) << "\n";
+        if (param.getKind() == GenericParamKind::Type) {
+            printMetadataName(*genericArgs);
+        }
+        genericArgs += 1;
+    }
+    std::cout << std::flush;
+}
+
+void test_print_properties(const void* value) {
+    using namespace reflection;
+
+    auto metadata = reinterpret_cast<const StructMetadata*>(value);
+    if (metadata->getKind() != MetadataKind::Struct ||
+        !metadata->getDescription()->isReflectable()) {
+        return;
+    }
+    const FieldDescriptor* fields = metadata->getDescription()->Fields;
+    auto records = fields->getFields();
+    auto offsets = metadata->getFieldOffsets();
+    std::cout << "metadata-> " << metadata << "\n" <<
+              "fields-> " << fields << "\n" <<
+              "records-> " << records.data() << "\n" <<
+        "offsets-> " << offsets << "\n";
+    
+    for (auto& record: records) {
+        std::cout << &record << "\n" << "offset-> " << *offsets << "\n";
+        offsets += 1;
+    }
+    std::cout << std::flush;
 }
 
 void printAllDescriptionKind(const ContextDescriptor* description) {
@@ -155,14 +180,19 @@ void printDescriptionName(const Descriptor* descriptor) {
 }
 
 void printMetadataName(const Metadata* metadata) {
+//    std::cout << metadataKindText(metadata->getKind()) << "\n";
     switch (metadata->getKind()) {
         case MetadataKind::Class: {
             auto c = reinterpret_cast<const ClassMetadata*>(metadata);
+//            std::cout << "MetadataKind::Class-> " << c << "\n" <<
+//                "Description-> " << c->getDescription() << "\n";
             printDescriptionName(c->getDescription());
             break;
         }
         case MetadataKind::Struct: {
             auto c = reinterpret_cast<const StructMetadata*>(metadata);
+//            std::cout << "MetadataKind::Struct-> " << c << "\n" <<
+//                "Description-> " << c->getDescription() << "\n";
             printDescriptionName(c->getDescription());
             break;
         }

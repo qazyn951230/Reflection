@@ -91,6 +91,11 @@ public struct ContextDescriptor: TargetContextDescriptor {
             .advanced(by: offset + Int(fields))
             .reinterpretCast(to: FieldDescriptor.RawValue.self)
     }
+
+    @inlinable
+    public static func genericArgumentOffset() -> Int {
+        fatalError("Not a generic context descriptor")
+    }
 }
 
 /// Descriptor for a module context.
@@ -119,6 +124,11 @@ public struct ModuleContextDescriptor: TargetContextDescriptor { // TargetModule
         public let parent: Int32
         // RelativeDirectPointer<const char, /*nullable*/ false> Name;
         public let name: Int32
+    }
+
+    @inlinable
+    public static func genericArgumentOffset() -> Int {
+        fatalError("Not a generic context descriptor")
     }
 }
 
@@ -168,6 +178,11 @@ public struct ClassDescriptor: TargetTypeContextDescriptor { // TargetClassDescr
         public let immediateMembersCount: UInt32
         public let fieldsCount: UInt32
         public let fieldOffsetVectorOffset: UInt32
+    }
+
+    @inlinable
+    public static func genericArgumentOffset() -> Int {
+        fatalError("Not a generic context descriptor")
     }
 }
 
@@ -224,6 +239,11 @@ public struct StructDescriptor: TargetTypeContextDescriptor, TrailingGenericCont
         public let fieldCount: UInt32 // NumFields
         public let fieldOffsetVectorOffset: UInt32
     }
+
+    @inlinable
+    public static func genericArgumentOffset() -> Int {
+        StructMetadata.genericArgumentOffset()
+    }
 }
 
 public struct EnumDescriptor: TargetTypeContextDescriptor { // TargetEnumDescriptor
@@ -277,5 +297,10 @@ public struct EnumDescriptor: TargetTypeContextDescriptor { // TargetEnumDescrip
         /// if any, is stored in the high 8 bits.
         public let payloadCasesCountAndPayloadSizeOffset: UInt32
         public let emptyCasesCount: UInt32
+    }
+
+    @inlinable
+    public static func genericArgumentOffset() -> Int {
+        fatalError("Not a generic context descriptor")
     }
 }

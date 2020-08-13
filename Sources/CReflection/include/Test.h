@@ -29,6 +29,7 @@ SP_C_FILE_BEGIN
 
 void test_print_all_kind(const void* value);
 void test_print_generic_context(const void* value);
+void test_print_properties(const void* value);
 
 SP_C_FILE_END
 

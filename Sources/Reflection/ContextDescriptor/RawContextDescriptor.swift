@@ -33,6 +33,8 @@ public protocol RawTargetContextDescriptor {
 public protocol TargetContextDescriptor: UnsafeRawRepresentable where RawValue: RawTargetContextDescriptor {
     var kind: ContextDescriptorKind { get }
     var parent: ContextDescriptor? { get }
+
+    static func genericArgumentOffset() -> Int
 }
 
 extension TargetContextDescriptor {
@@ -60,11 +62,37 @@ extension TargetContextDescriptor where Self: TrailingGenericContainer {
         guard isGeneric else {
             return nil
         }
-        let header = self.trailingObjects(as: Self.Header.self)
-        let raw = UnsafeRawPointer(bitPattern:
-            UInt(bitPattern: header) - UInt(MemoryLayout<GenericContext.RawValue>.size)
+        // Header address = UInt(bitPattern: header + 1) - UInt(MemoryLayout<GenericContextDescriptorHeader>.size
+        let header = trailingObjects(as: Self.Header.self)
+        let raw = UnsafeRawPointer(bitPattern: UInt(bitPattern: header + 1) -
+            UInt(MemoryLayout<GenericContextDescriptorHeader>.size + MemoryLayout<GenericContext.RawValue>.size)
         ).unsafelyUnwrapped
         return GenericContext.cast(from: raw)
+    }
+
+    public func genericParameters() -> ArrayRef<GenericParamDescriptor, GenericParamDescriptor>? {
+        guard isGeneric else {
+            return nil
+        }
+        let start = trailingObjects(as: GenericParamDescriptor.self)
+        let count = genericContextHeader().parametersCount
+        return ArrayRef(start: start, count: Int(count))
+    }
+
+    public func genericArguments(of metadata: Metadata) -> UnsafePointer<UnsafePointer<Metadata.RawValue>> {
+        let raw = metadata.rawValue.reinterpretCast(to: UnsafePointer<Metadata.RawValue>.self)
+        return raw + Self.genericArgumentOffset()
+    }
+
+    public func genericArguments<T>(metadata: T) -> UnsafePointer<UnsafePointer<Metadata.RawValue>>
+        where T: TargetMetadata {
+        let raw = metadata.rawValue.reinterpretCast(to: UnsafePointer<Metadata.RawValue>.self)
+        return raw + Self.genericArgumentOffset()
+    }
+
+    public func genericArguments(of metadata: AnyMetadata) -> UnsafePointer<UnsafePointer<Metadata.RawValue>> {
+        let raw = metadata.rawValue.reinterpretCast(to: UnsafePointer<Metadata.RawValue>.self)
+        return raw + Self.genericArgumentOffset()
     }
 }
 

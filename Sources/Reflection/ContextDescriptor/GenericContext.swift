@@ -20,49 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyMetadata {
-    private let box: _AnyMetadataBox
+// TargetGenericContext
+public struct GenericContext: UnsafeRawRepresentable, TrailingGenericContainer {
+    public let rawValue: UnsafePointer<RawValue>
 
-    var rawValue: UnsafeRawPointer {
-        box.rawValue
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
     }
 
-    public init<T>(_ value: T) where T: TargetMetadata {
-        box = _AnyMetadata<T>(value)
+    public struct RawValue {
+        let dummy: UInt32
     }
 
-    public var kind: Metadata.Kind {
-        box.kind
-    }
-
-    public func `as`<T>(_ type: T.Type) -> T? where T: TargetMetadata {
-        box.as(type)
-    }
-}
-
-private protocol _AnyMetadataBox {
-    var kind: Metadata.Kind { get }
-    var rawValue: UnsafeRawPointer { get }
-
-    func `as`<T>(_ type: T.Type) -> T? where T: TargetMetadata
-}
-
-private final class _AnyMetadata<T>: _AnyMetadataBox where T: TargetMetadata {
-    let value: T
-
-    init(_ value: T) {
-        self.value = value
-    }
-
-    var kind: Metadata.Kind {
-        value.kind
-    }
-
-    var rawValue: UnsafeRawPointer {
-        value.rawValue.reinterpretCast()
-    }
-
-    func `as`<T>(_ type: T.Type) -> T? where T: TargetMetadata {
-        value as? T
+    public func genericParameters() -> ArrayRef<GenericParamDescriptor, GenericParamDescriptor>? {
+        let start = trailingObjects(as: GenericParamDescriptor.self)
+        let count = genericContextHeader().parametersCount
+        return ArrayRef(start: start, count: Int(count))
     }
 }

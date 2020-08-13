@@ -20,15 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// TargetGenericContext
-public struct GenericContext: UnsafeRawRepresentable, TrailingGenericContainer {
-    public let rawValue: UnsafePointer<RawValue>
+#if ENABLE_REFLECTION_DEMANGLE
 
-    public init(rawValue: UnsafePointer<RawValue>) {
-        self.rawValue = rawValue
-    }
-    
-    public struct RawValue {
-        let dummy: UInt32
-    }
-}
+// swift_getTypeByMangledNameImpl
+func resolveType(byMangledName name: String) {}
+
+#endif // ENABLE_REFLECTION_DEMANGLE

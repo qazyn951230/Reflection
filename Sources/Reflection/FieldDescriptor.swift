@@ -92,6 +92,11 @@ public struct FieldRecord: UnsafeRawRepresentable {
         return String(cString: c)
     }
 
+    var cMangledTypeName: UnsafePointer<UInt8> {
+        RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.mangledTypeName)
+            .reinterpretCast(to: UInt8.self)
+    }
+
     public var fieldName: String? {
         let name = rawValue.pointee.fieldName
         guard name != 0, let offset = MemoryLayout.offset(of: \RawValue.fieldName) else {
@@ -111,37 +116,9 @@ public struct FieldRecord: UnsafeRawRepresentable {
     }
 }
 
-public struct FieldRecordIterator: IteratorProtocol {
-    public typealias Element = FieldRecord
-
-    private var current: UnsafePointer<FieldRecord.RawValue>
-    private let end: UnsafePointer<FieldRecord.RawValue>
-
-    init(start: UnsafePointer<FieldRecord.RawValue>, end: UnsafePointer<FieldRecord.RawValue>) {
-        current = start
-        self.end = end
-    }
-
-    public mutating func next() -> FieldRecord? {
-        guard current != end else {
-            return nil
-        }
-        defer {
-            current += 1
-        }
-        return FieldRecord(rawValue: current)
-    }
-}
-
 extension FieldDescriptor {
-    public func fieldRecordIterator() -> FieldRecordIterator {
-        let start = rawValue.advanced(by: 1)
-            .reinterpretCast(to: FieldRecord.RawValue.self)
-        let end = start.advanced(by: Int(rawValue.pointee.fieldsCount))
-        return FieldRecordIterator(start: start, end: end)
-    }
-
-    public func fieldRecords() -> IteratorSequence<FieldRecordIterator> {
-        IteratorSequence(fieldRecordIterator())
+    public func fieldRecords() -> ArrayRef<FieldRecord, FieldRecord.RawValue> {
+        ArrayRef(start: rawValue.advanced(by: 1).reinterpretCast(to: FieldRecord.RawValue.self),
+                 count: Int(rawValue.pointee.fieldsCount))
     }
 }

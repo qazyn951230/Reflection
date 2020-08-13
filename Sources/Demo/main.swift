@@ -26,47 +26,24 @@ import SwiftUI
 
 struct Foobar {
     let value = 12
+    let bar = false
 }
 
-//let a: [Any.Type] = [Int.self, Foobar.self, String.self]
-//
-//for t in a {
-//    switch Metadata.load(from: t) {
-//    case Int.self:
-//        print("Int")
-//    case Foobar.self:
-//        print("Foobar")
-//    default:
-//        print("Any")
-//    }
-//}
+dump(Foobar())
 
-let text = Text("Foobar")
-    .offset(CGSize.zero)
-
-let t: Any.Type = type(of: text)
+//let t: Any.Type = Foobar.self // type(of: text)
 //test_print_all_kind(unsafeBitCast(t, to: UnsafeRawPointer.self))
-test_print_generic_context(unsafeBitCast(t, to: UnsafeRawPointer.self))
+//test_print_generic_context(unsafeBitCast(t, to: UnsafeRawPointer.self))
+//test_print_properties(unsafeBitCast(t, to: UnsafeRawPointer.self))
 
-// test_print_all_kind
-//let metadata = StructMetadata.load(from: t)
-//print(metadata.kind)
-////print(metadata.description.kind)
-//var d: ContextDescriptor? = ContextDescriptor(other: metadata.description)
-//while let t = d {
-//    print(t.kind)
-//    d = d?.parent
+//let data = StructMetadata.load(from: t)
+//let fields = data.description.fields!
+//for i in 0..<fields.fieldRecords().count {
+//    print(data.fieldOffset(at: i) ?? -1)
 //}
 
-// test_print_generic_context
-let metadata = StructMetadata.load(from: t)
-let descriptor = metadata.description
-//let header = descriptor.trailingObjects(as: StructDescriptor.Header.self)
-//print(header)
-//print(header.pointee.base)
-if let context = descriptor.genericContext() {
-    print(context.rawValue)
-}
+//let text = Text("Foobar")
+//    .offset(CGSize.zero)
 
 //Swift.dump(text)
 //▿ SwiftUI.ModifiedContent<SwiftUI.Text, SwiftUI._OffsetEffect>
@@ -87,9 +64,7 @@ if let context = descriptor.genericContext() {
 //    - height: 0.0
 
 //print("--------")
-
-//dump(bar)
-
+//dump(text)
 // https://unicode-table.com/en/blocks/box-drawing/
 //SwiftUI.ModifiedContent<SwiftUI.Text, SwiftUI._OffsetEffect>
 //├┬ content: SwiftUI.Text

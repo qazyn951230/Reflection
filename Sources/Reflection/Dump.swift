@@ -56,9 +56,9 @@ private func _dump(_ value: Any, to stream: inout StandardOutput, name: String?,
     }
     item -= 1
     stream.write(char: 0x20, count: indent)
-    let reflection = Reflection(type(of: value))
+    let explosion = Explosion(type(of: value))
     stream.write(
-        reflection.propertyCount == 0 ?
+        explosion.propertyCount == 0 ?
             "-" :
             (maxDepth <= 0 ? "▹" : "▿")
     )
@@ -67,21 +67,34 @@ private func _dump(_ value: Any, to stream: inout StandardOutput, name: String?,
         stream.write(name)
         stream.write(": ")
     }
-    _dumpSelf(value, reflection, to: &stream)
+    _dumpSelf(value, explosion, to: &stream)
+    stream.write(byte: 0x0A)
+    for property in explosion.properties() {
+        if let type = property.type {
+            stream.write(Swift._typeName(type, qualified: true))
+        }
+        if let name = property.name, let offset = property.offset {
+            stream.write(" name: \(name), \(offset)\n")
+        }
+    }
 }
 
 // .../swift/stdlib/public/core/OutputStream.swift!_dumpPrint_unlocked
 @_semantics("optimize.sil.specialize.generic.never")
-private func _dumpSelf(_ value: Any, _ reflection: Reflection, to stream: inout StandardOutput) {
+private func _dumpSelf(_ value: Any, _ explosion: Explosion, to stream: inout StandardOutput) {
     let type: Any.Type = Swift.type(of: value)
     let kind = Metadata.readKind(from: type)
     switch kind {
     case .class, .struct:
-        stream.write(_typeName(type, kind: kind))
+        stream.write("\(kind) ")
+        stream.write(Swift._typeName(type, qualified: true))
+//        stream.write(_typeName(type, kind: kind))
     default:
         break
     }
 }
+
+#if ENABLE_REFLECTION_DEMANGLE
 
 // `_typeName` call stack:
 // .../swift/stdlib/public/core/Misc.swift!_typeName
@@ -131,3 +144,5 @@ private func _qualifiedTypeName<T>(_ description: T) -> String where T: TargetCo
     }
     return names.reversed().joined(separator: ".")
 }
+
+#endif // ENABLE_REFLECTION_DEMANGLE

@@ -27,6 +27,10 @@ public struct Metadata: TargetMetadata {
         self.rawValue = rawValue
     }
 
+    public init<T>(other: T) where T: TargetMetadata {
+        self = Metadata.cast(from: other.rawValue)
+    }
+
     public func cast<T>() -> T where T: TargetMetadata {
         T.cast(from: rawValue)
     }
@@ -128,10 +132,13 @@ extension Metadata {
                     context: context, arguments: arguments)
     }
 
+    // .../swift/stdlib/public/core/KeyPath.swift!_getSymbolicMangledNameLength
     static func mangledNameLength(_ start: UnsafePointer<UInt8>) -> UInt {
         var end = start
         var current = end.pointee
         while current != 0 {
+            // Skip the current character
+            end += 1
             if current >= 0x01 && current <= 0x17 {
                 end += MemoryLayout<UInt32>.size
             } else if current >= 0x18 && current <= 0x1F {
@@ -140,7 +147,7 @@ extension Metadata {
             end += 1
             current = end.pointee
         }
-        return UInt(end.distance(to: start))
+        return UInt(start.distance(to: end))
     }
 }
 
@@ -246,10 +253,13 @@ public struct StructMetadata: TargetValueMetadata { // TargetStructMetadata
 
     /// Get a pointer to the field offset vector, if present, or null.
     var fieldOffsets: UnsafePointer<UInt32>? {
-        RelativeDirectPointer.resolve(
-            any: rawValue.reinterpretCast(),
-            Int(description.fieldOffsetVectorOffset)
-        )?.reinterpretCast(to: UInt32.self)
+        let offset = description.fieldOffsetVectorOffset
+        if offset == 0 {
+            return nil
+        }
+        return rawValue.reinterpretCast(to: UnsafeRawPointer.self)
+            .advanced(by: Int(offset))
+            .reinterpretCast(to: UInt32.self)
     }
 
     public func fieldOffset(at index: Int) -> Int? {

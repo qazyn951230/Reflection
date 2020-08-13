@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct Reflection {
+public struct Explosion {
     private let box: ReflectionBox
 
     public init<T>(type: T.Type) {
@@ -47,15 +47,18 @@ public struct Reflection {
 public struct ReflectedProperty {
     public let name: String?
     public let offset: Int?
+    public let type: Any.Type?
 
     init() {
         name = nil
         offset = nil
+        type = nil
     }
 
-    init(name: String?, offset: Int?) {
+    init(name: String?, offset: Int?, type: Any.Type?) {
         self.name = name
         self.offset = offset
+        self.type = type
     }
 
     public func value<T, K>(as type: K.Type, from object: T) -> K? {
@@ -115,6 +118,7 @@ private final class StructReflection: ReflectionBox {
             let records = metadata.description.fields?.fieldRecords() else {
             return []
         }
+        let description = metadata.description
         let offsets = metadata.fieldOffsets
         var result: [ReflectedProperty] = []
         var i = 0
@@ -125,10 +129,12 @@ private final class StructReflection: ReflectionBox {
             } else {
                 offset = nil
             }
-            result.append(ReflectedProperty(name: record.fieldName, offset: offset))
+            let type = Metadata.resolveType(by: record.cMangledTypeName,
+                                            context: description.genericContext()?.rawValue.reinterpretCast(),
+                                            arguments: description.genericParameters()?.data.reinterpretCast())
+            result.append(ReflectedProperty(name: record.fieldName, offset: offset, type: type))
             i += 1
         }
-//        Metadata.resolveType(by: <#T##UnsafePointer<UInt8>#>, context: <#T##UnsafeRawPointer?#>, arguments: <#T##UnsafeRawPointer?#>)
         return result
     }
 }

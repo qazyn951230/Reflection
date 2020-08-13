@@ -122,11 +122,13 @@ extension TrailingGenericContainer where Self: TargetContextDescriptor {
         case Header.self:
             return isGeneric ? 1 : 0
         case GenericParamDescriptor.self:
-            return 0
+            return Int(genericContextHeader().parametersCount)
         case GenericRequirementDescriptor.self:
-            return 0
+            return Int(genericContextHeader().requirementsCount)
         default:
             return Self.followingTrailingObjectsCount(of: metadata)
         }
     }
 }
+
+public typealias TargetGenericContainer = TargetContextDescriptor & TrailingGenericContainer

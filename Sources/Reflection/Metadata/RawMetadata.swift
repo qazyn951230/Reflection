@@ -56,6 +56,8 @@ public protocol RawTargetMetadata {
 
 public protocol TargetMetadata: UnsafeRawRepresentable where RawValue: RawTargetMetadata {
     var kind: Metadata.Kind { get }
+
+    static func genericArgumentOffset() -> Int
 }
 
 extension TargetMetadata {
@@ -77,6 +79,11 @@ extension TargetMetadata {
 
     public static func load(from type: Any.Type) -> Self {
         Self(rawValue: unsafeBitCast(type, to: UnsafePointer<RawValue>.self))
+    }
+
+    @inlinable
+    public static func genericArgumentOffset() -> Int {
+        return MemoryLayout<RawValue>.size / MemoryLayout<UInt>.size
     }
 }
 

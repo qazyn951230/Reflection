@@ -107,7 +107,7 @@ extension TrailingContainer where Self: UnsafeRawRepresentable {
         }
         return base.reinterpretCast(to: T.self)
     }
-    
+
     @_transparent
     public func trailingObjects<T>(as type: T.Type) -> UnsafePointer<T> {
         trailingObjects()
