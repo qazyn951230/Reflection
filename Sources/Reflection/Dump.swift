@@ -48,7 +48,7 @@ public func dump<T>(_ value: T, name: String? = nil, indent: Int = 0,
     return value
 }
 
-@_semantics("optimize.sil.specialize.generic.never")
+// @_semantics("optimize.sil.specialize.generic.never")
 private func _dump(_ value: Any, to stream: inout StandardOutput, name: String?, indent: Int,
                    maxDepth: Int, item: inout Int, items: inout Set<ObjectIdentifier>) {
     guard item > 0 else {
@@ -57,11 +57,8 @@ private func _dump(_ value: Any, to stream: inout StandardOutput, name: String?,
     item -= 1
     stream.write(char: 0x20, count: indent)
     let explosion = Explosion(type(of: value))
-    stream.write(
-        explosion.propertyCount == 0 ?
-            "-" :
-            (maxDepth <= 0 ? "▹" : "▿")
-    )
+    stream.write(explosion.propertyCount == 0 ?
+        "-" : (maxDepth <= 0 ? "▹" : "▿"))
     stream.write(char: 0x20)
     if let name = name {
         stream.write(name)
@@ -76,14 +73,28 @@ private func _dump(_ value: Any, to stream: inout StandardOutput, name: String?,
         if let name = property.name, let offset = property.offset {
             stream.write(" name: \(name), \(offset)\n")
         }
+//        _dumpSelf(<#T##value: Any##Any#>, <#T##explosion: Explosion##Explosion#>, to: &<#T##StandardOutput#>)
     }
 }
 
 // .../swift/stdlib/public/core/OutputStream.swift!_dumpPrint_unlocked
-@_semantics("optimize.sil.specialize.generic.never")
+// @_semantics("optimize.sil.specialize.generic.never")
 private func _dumpSelf(_ value: Any, _ explosion: Explosion, to stream: inout StandardOutput) {
     let type: Any.Type = Swift.type(of: value)
-    let kind = Metadata.readKind(from: type)
+    let metadata = Metadata.load(from: type)
+    if metadata.kind == .struct {
+        switch metadata {
+        case Int.self:
+            stream.write("\(value as! Int)")
+            return
+        case Bool.self:
+            stream.write("\(value as! Bool)")
+            return
+        default:
+            break
+        }
+    }
+    let kind = metadata.kind
     switch kind {
     case .class, .struct:
         stream.write("\(kind) ")

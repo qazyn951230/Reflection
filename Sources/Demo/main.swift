@@ -29,8 +29,6 @@ struct Foobar {
     let bar = false
 }
 
-dump(Foobar())
-
 //let t: Any.Type = Foobar.self // type(of: text)
 //test_print_all_kind(unsafeBitCast(t, to: UnsafeRawPointer.self))
 //test_print_generic_context(unsafeBitCast(t, to: UnsafeRawPointer.self))
@@ -63,7 +61,15 @@ dump(Foobar())
 //    - width: 0.0
 //    - height: 0.0
 
-//print("--------")
+let bar = Foobar()
+Swift.dump(bar)
+//▿ Demo.Foobar
+//- value: 12
+//- bar: false
+
+print("--------")
+dump(bar)
+
 //dump(text)
 // https://unicode-table.com/en/blocks/box-drawing/
 //SwiftUI.ModifiedContent<SwiftUI.Text, SwiftUI._OffsetEffect>

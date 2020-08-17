@@ -116,7 +116,7 @@ extension Metadata {
                              const char *typeNameStart,
                              size_t typeNameLength,
                              const TargetContextDescriptor<InProcess> *context,
-                             const void * const *genericArgs) {
+                             const void * const *genericArgs);
      ```
      */
     @_transparent
