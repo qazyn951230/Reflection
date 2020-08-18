@@ -61,7 +61,7 @@ enum RelativeDirectPointer {
 /// }
 /// ```
 @_transparent
-private func applyRelativeOffset(_ base: UnsafeRawPointer, _ offset: Int) -> UInt {
+func applyRelativeOffset(_ base: UnsafeRawPointer, _ offset: Int) -> UInt {
     let (result, _) = UInt(bitPattern: base).addingReportingOverflow(UInt(bitPattern: offset))
     return result
 }

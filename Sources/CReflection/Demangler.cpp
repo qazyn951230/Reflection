@@ -21,7 +21,8 @@
 // SOFTWARE.
 
 #include <swift/Demangling/Demangler.h>
-#include "Demangler.hpp"
+#include "include/Demangle.h"
+#include "Types.hpp"
 
 using namespace swift;
 using namespace swift::Demangle;
@@ -38,6 +39,66 @@ void demangler_clear(demangler_p demangler) {
     unwrap(demangler)->clear();
 }
 
+dnode_p demangler_demangle_type(demangler_p demangler, const uint8_t* mangledName, NSUInteger length) {
+    StringRef name{reinterpret_cast<const char*>(mangledName), static_cast<size_t>(length)};
+    auto node = unwrap(demangler)->demangleType(name);
+    return reinterpret_cast<dnode_p>(node);
+}
+
+dnode_p demangler_demangle_type_block(demangler_p demangler, const uint8_t* mangledName,
+    NSUInteger length, symbolic_reference_resolver_t SP_NOESCAPE resolver) {
+    StringRef name{reinterpret_cast<const char*>(mangledName), static_cast<size_t>(length)};
+    auto node = unwrap(demangler)->demangleType(name, [&](SymbolicReferenceKind a, Directness b, auto c, auto d) {
+        auto node = resolver(static_cast<CRSymbolicReferenceKind>(a), static_cast<CRDirectness>(b), c, d);
+        return reinterpret_cast<NodePointer>(node);
+    });
+    return reinterpret_cast<dnode_p>(node);
+}
+
 dnode_p demangler_create_node(demangler_p demangler, CRDNodeKind kind) {
     return wrap(unwrap(demangler)->createNode(static_cast<Node::Kind>(kind)));
+}
+
+dnode_p demangler_create_node_index(demangler_p demangler, CRDNodeKind kind, NSUInteger pointer) {
+    return wrap(unwrap(demangler)->createNode(static_cast<Node::Kind>(kind), static_cast<uint64_t>(pointer)));
+}
+
+CRDNodeKind dnode_get_kind(dnode_p node) {
+    return static_cast<CRDNodeKind>(unwrap(node)->getKind());
+}
+
+uint64_t dnode_get_index(dnode_p node) {
+    return unwrap(node)->getIndex();
+}
+
+const char* dnode_get_text(dnode_p node, NSInteger* SP_NULLABLE length) {
+    const auto& text = unwrap(node)->getText();
+    if (length != nullptr) {
+        *length = text.size();
+    }
+    return text.data();
+}
+
+size_t dnode_children_count(dnode_p node) {
+    return unwrap(node)->getNumChildren();
+}
+
+dnode_p dnode_child_at_index(dnode_p node, size_t index) {
+    return wrap(unwrap(node)->getChild(index));
+}
+
+void dnode_append_child(dnode_p node, dnode_p child, demangler_p demangler) {
+    unwrap(node)->addChild(unwrap(child), *unwrap(demangler));
+}
+
+bool dnode_is_text_equals(dnode_p node, const char* text) {
+    return unwrap(node)->getText().equals(text);
+}
+
+bool dnode_is_specialized(dnode_p node) {
+    return ::isSpecialized(unwrap(node));
+}
+
+dnode_p dnode_get_unspecialized(dnode_p node, demangler_p demangler) {
+    return wrap(::getUnspecialized(unwrap(node), *unwrap(demangler)));
 }

@@ -20,21 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef REFLECTION_DEMANGLER_H
-#define REFLECTION_DEMANGLER_H
+#ifndef REFLECTION_METADATA_LOOKUP_H
+#define REFLECTION_METADATA_LOOKUP_H
 
-#include "Types.h"
-#include "CRDNodeKind.h"
+#if (__cplusplus)
+#include <cstddef>
+#else
+#include <stddef.h>
+#endif // (__cplusplus)
+
+#include "Config.h"
 
 SP_C_FILE_BEGIN
 
-demangler_p demangler_create();
-void demangler_free(demangler_p ref);
-
-void demangler_clear(demangler_p demangler);
-
-dnode_p demangler_create_node(demangler_p demangler, CRDNodeKind kind);
+const void* find_standard_type_descriptor(const char* name, size_t length);
 
 SP_C_FILE_END
 
-#endif //REFLECTION_DEMANGLER_H
+#endif // REFLECTION_METADATA_LOOKUP_H

@@ -26,6 +26,8 @@
 
 // SPM did not honor "CReflection.apinotes"
 typealias DNodeKind = CRDNodeKind
+typealias SymbolicReferenceKind = CRSymbolicReferenceKind
+typealias Directness = CRDirectness
 
 class Demangler {
     let ref: demangler_p
@@ -39,13 +41,138 @@ class Demangler {
     }
 
     @discardableResult
+    func demangleType(mangledName: UnsafePointer<UInt8>) -> DNodeRef? {
+        let length = Metadata.mangledNameLength(mangledName)
+        let node = demangler_demangle_type(ref, mangledName, length)
+        return node.map(DNodeRef.init(ref:))
+    }
+
+    @discardableResult
+    func demangleType(mangledName: UnsafePointer<UInt8>, // resolver: symbolic_reference_resolver_t
+                      resolver: (SymbolicReferenceKind, Directness, Int32, UnsafeRawPointer) -> dnode_p?) -> DNodeRef? {
+        let length = Metadata.mangledNameLength(mangledName)
+        let node = demangler_demangle_type_block(ref, mangledName, length, resolver)
+        return node.map(DNodeRef.init(ref:))
+    }
+
+    @discardableResult
+    @inlinable
     func createNode(kind: DNodeKind) -> DNodeRef {
         DNodeRef(ref: demangler_create_node(ref, kind))
+    }
+
+    @discardableResult
+    @inlinable
+    func createNode(kind: DNodeKind, pointer: UInt) -> DNodeRef {
+        DNodeRef(ref: demangler_create_node_index(ref, kind, pointer))
     }
 }
 
 struct DNodeRef {
     let ref: dnode_p
+
+    @inlinable
+    func appendChild(_ child: DNodeRef, in demangler: Demangler) {
+        dnode_append_child(ref, child.ref, demangler.ref)
+    }
+
+    @inlinable
+    var kind: DNodeKind {
+        dnode_get_kind(ref)
+    }
+
+    @inlinable
+    var childCount: Int {
+        dnode_children_count(ref)
+    }
+
+    @inlinable
+    var isSpecialized: Bool {
+        dnode_is_specialized(ref)
+    }
+
+    @inlinable
+    var index: UInt64 {
+        dnode_get_index(ref)
+    }
+
+    @inlinable
+    var text: String {
+        String(cString: dnode_get_text(ref, nil))
+    }
+
+    @inlinable
+    func unspecialized(in demangler: Demangler) -> DNodeRef {
+        DNodeRef(ref: dnode_get_unspecialized(ref, demangler.ref))
+    }
+
+    @inlinable
+    func child(at index: Int) -> DNodeRef {
+        DNodeRef(ref: dnode_child_at_index(ref, index))
+    }
+
+    @inlinable
+    func textEquals(_ value: String) -> Bool {
+        dnode_is_text_equals(ref, value)
+    }
+
+    @inlinable
+    subscript(index: Int) -> DNodeRef {
+        child(at: index)
+    }
+}
+
+// .../swift/stdlib/public/runtime/Private.h!swift::ResolveAsSymbolicReference
+// ../swift/stdlib/public/runtime/MetadataLookup.cpp!swift::ResolveAsSymbolicReference::operator()
+@_transparent
+func resolveAsSymbolicReference(demangler: Demangler) -> symbolic_reference_resolver_t {
+    return { a, b, c, d in
+        _resolveAsSymbolicReference(demangler: demangler, kind: a, directness: b, offset: c, base: d)
+    }
+}
+
+func _resolveAsSymbolicReference(demangler: Demangler, kind: SymbolicReferenceKind, directness: Directness,
+                                 offset: Int32, base: UnsafeRawPointer) -> dnode_p? {
+    var addresss = applyRelativeOffset(base, Int(offset))
+    if directness == .indirect {
+        addresss = UnsafePointer<UInt>(bitPattern: addresss).unsafelyUnwrapped
+            .pointee
+    }
+    let nodeKind: DNodeKind
+    let isType: Bool
+    switch kind {
+    case .context:
+        let pointer = UnsafeRawPointer(bitPattern: addresss).unsafelyUnwrapped
+        let descriptor = ContextDescriptor.cast(from: pointer)
+        switch descriptor.kind {
+        case .protocol:
+            nodeKind = .protocolSymbolicReference
+            isType = false
+        case .opaqueType:
+            nodeKind = .opaqueTypeDescriptorSymbolicReference
+            isType = false
+        // descriptor is TargetTypeContextDescriptor
+        case .class, .struct, .enum:
+            nodeKind = .typeSymbolicReference
+            isType = true
+        default:
+            // References to other kinds of context aren't yet implemented.
+            return nil
+        }
+    case .accessorFunctionReference:
+        nodeKind = .accessorFunctionReference
+        isType = false
+    @unknown default:
+        fatalError("Unknown case of SymbolicReferenceKind")
+    }
+    let node = demangler.createNode(kind: nodeKind, pointer: addresss)
+    if isType {
+        let typeNode = demangler.createNode(kind: .type)
+        typeNode.appendChild(node, in: demangler)
+        return typeNode.ref
+    } else {
+        return node.ref
+    }
 }
 
 extension Demangler {
@@ -63,48 +190,6 @@ extension Demangler {
         }
         // .../swift/stdlib/public/runtime/Private.h!swift::gatherWrittenGenericArgs
         // .../swift/stdlib/public/runtime/MetadataLookup.cpp!swift::gatherWrittenGenericArgs
-    }
-
-    static func gatherWrittenGenericArgs<Descriptor>(
-        metadata: AnyMetadata, description: Descriptor, demangler: Demangler
-    ) -> [Metadata?] where Descriptor: TargetGenericContainer {
-        // .../include/swift/ABI/Metadata.h!TargetTypeContextDescriptor<InProcess>::getGenericContext
-        guard let generics = description.genericContext(),
-            let parameters = generics.genericParameters() else {
-            return []
-        }
-        var missingWrittenArguments = false
-        var result: [Metadata?] = []
-        var args = description.genericArguments(of: metadata)
-        for parameter in parameters {
-            if parameter.kind == .type {
-                if parameter.contains(.keyArgument) {
-                    let arg = args.pointee
-                    args += 1
-                    result.append(Metadata(rawValue: arg))
-                } else {
-                    result.append(nil)
-                    missingWrittenArguments = true
-                }
-                if parameter.contains(.extraArgument) {
-                    result.append(nil)
-                    args += 1
-                }
-            } else {
-                if parameter.contains(.keyArgument) {
-                    result.append(nil)
-                    args += 1
-                }
-                if parameter.contains(.extraArgument) {
-                    result.append(nil)
-                    args += 1
-                }
-            }
-        }
-        guard missingWrittenArguments else {
-            return result
-        }
-        return result
     }
 }
 

@@ -3,3 +3,7 @@ Name: CReflection
 Tags:
 - Name: CRDNodeKind
   SwiftName: DNodeKind
+- Name: CRSymbolicReferenceKind
+  SwiftName: SymbolicReferenceKind
+- Name: CRDirectness
+  SwiftName: Directness

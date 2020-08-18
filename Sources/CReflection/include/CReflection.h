@@ -25,7 +25,7 @@
 
 #include "Config.h"
 #include "CRDNodeKind.h"
-#include "Demangler.h"
+#include "Demangle.h"
 #include "Reflection.h"
 #include "Test.h"
 #include "Types.h"

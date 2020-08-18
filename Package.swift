@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-let enableDemangle = false
+let enableDemangle = true
 let demangle: SwiftSetting = enableDemangle ?
     .define("ENABLE_REFLECTION_DEMANGLE") :
     .define("DISABLE_REFLECTION_DEMANGLE")
@@ -37,7 +37,9 @@ let package = Package(
                 .headerSearchPath("External/release/llvm/include")
             ],
             linkerSettings: [
-                .linkedLibrary("swiftDemangle")
+                .linkedLibrary("swiftCore"),
+                .linkedLibrary("swiftDemangle"),
+                .linkedLibrary("objc")
             ]
         ),
         .target(

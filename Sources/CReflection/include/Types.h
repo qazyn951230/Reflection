@@ -26,9 +26,11 @@
 #if (__cplusplus)
 #include <cstdint>
 #include <cstdbool>
+#include <cstddef>
 #else
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 #endif // (__cplusplus)
 
 #include "Config.h"

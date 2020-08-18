@@ -20,10 +20,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef REFLECTION_DEMANGLER_HPP
-#define REFLECTION_DEMANGLER_HPP
-
-#include "include/Demangler.h"
+#include <swift/Demangling/Demangler.h>
+#include "include/Demangle.h"
 #include "Types.hpp"
 
-#endif //REFLECTION_DEMANGLER_HPP
+using namespace swift::Demangle;
+
+void remangle_node(dnode_p node, remangle_text_t SP_NOESCAPE text) {
+    const auto& name = ::mangleNode(unwrap(node));
+    text(name.data(), name.length());
+}
+
+void remangle_node_block(dnode_p node, symbolic_resolver_t SP_NOESCAPE resolver,
+    remangle_text_t SP_NOESCAPE text) {
+    const auto& name = ::mangleNode(unwrap(node), [&](SymbolicReferenceKind a, auto b) {
+        return reinterpret_cast<NodePointer>(resolver(static_cast<CRSymbolicReferenceKind>(a), b));
+    });
+    text(name.data(), name.length());
+}
+
+void remangle_node_factory(dnode_p node, symbolic_resolver_t SP_NOESCAPE resolver,
+    demangler_p demangler, remangle_text_t SP_NOESCAPE text) {
+    const auto& name = ::mangleNode(unwrap(node), [&](SymbolicReferenceKind a, auto b) {
+        return reinterpret_cast<NodePointer>(resolver(static_cast<CRSymbolicReferenceKind>(a), b));
+    }, *unwrap(demangler));
+    text(name.data(), name.size());
+}

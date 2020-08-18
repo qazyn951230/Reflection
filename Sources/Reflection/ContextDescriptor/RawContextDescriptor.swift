@@ -58,6 +58,7 @@ extension TargetContextDescriptor {
 }
 
 extension TargetContextDescriptor where Self: TrailingGenericContainer {
+    // .../include/swift/ABI/Metadata.h!TargetTypeContextDescriptor<InProcess>::getGenericContext
     public func genericContext() -> GenericContext? {
         guard isGeneric else {
             return nil

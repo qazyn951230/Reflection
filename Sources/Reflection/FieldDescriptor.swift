@@ -42,12 +42,12 @@ public struct FieldDescriptor: UnsafeRawRepresentable {
 
     public struct RawValue {
         // const RelativeDirectPointer<const char> MangledTypeName;
-        let mangledTypeName: Int32
+        public let mangledTypeName: Int32
         // const RelativeDirectPointer<const char> Superclass;
-        let superclass: Int32
-        let kind: UInt16 // FieldDescriptorKind
-        let fieldRecordSize: UInt16
-        let fieldsCount: UInt32 // NumFields
+        public let superclass: Int32
+        public let kind: UInt16 // FieldDescriptorKind
+        public let fieldRecordSize: UInt16
+        public let fieldsCount: UInt32 // NumFields
     }
 
     public enum Kind: UInt16 {

@@ -2,14 +2,16 @@ add_library(CReflection SHARED
     Runtime/Metadata.cpp
     Runtime/Errors.cpp
     Demangler.cpp
-    Demangler.hpp
+    MetadataLookup.cpp
     Reflection.cpp
+    Remangler.cpp
     Test.cpp
     Types.hpp
     include/Config.h
     include/CRDNodeKind.h
     include/CReflection.h
-    include/Demangler.h
+    include/Demangle.h
+    include/MetadataLookup.h
     include/Reflection.h
     include/Test.h
     include/Types.h)
@@ -36,4 +38,4 @@ target_include_directories(CReflection PRIVATE
 
 target_link_options(CReflection PRIVATE -L/usr/lib/swift)
 
-target_link_libraries(CReflection PRIVATE swiftDemangle objc)
+target_link_libraries(CReflection PRIVATE swiftCore swiftDemangle objc)
