@@ -20,10 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// .../swift/include/swift/ABI/Metadata.h!TargetExtensionContextDescriptor
+// .../swift/include/swift/ABI/Metadata.h!TargetOpaqueTypeDescriptor
 
-/// Descriptor for an extension context.
-public struct ExtensionContextDescriptor: TargetContextDescriptor {
+public struct OpaqueTypeDescriptor: TargetContextDescriptor, TrailingGenericContainer {
+    public typealias RawValue = ContextDescriptor.RawValue
+
     public let rawValue: UnsafePointer<RawValue>
 
     public init(rawValue: UnsafePointer<RawValue>) {
@@ -37,29 +38,14 @@ public struct ExtensionContextDescriptor: TargetContextDescriptor {
         return ContextDescriptor.cast(from: address)
     }
 
-    public var extendedContext: UnsafePointer<UInt8> {
-        // nullable??
-        RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.extendedContext)
-            .reinterpretCast(to: UInt8.self)
+    public static var followingTrailingTypes: [AnyLayout] {
+        // [RelativeDirectPointer<const char>]
+        [AnyLayout(Int32.self)]
     }
 
-    public struct RawValue: RawTargetContextDescriptor {
-        public let flags: UInt32
-        public let parent: Int32
-        /// A mangling of the `Self` type context that the extension extends.
-        /// The mangled name represents the type in the generic context encoded by
-        /// this descriptor. For example, a nongeneric nominal type extension will
-        /// encode the nominal type name. A generic nominal type extension will encode
-        /// the instance of the type with any generic arguments bound.
-        ///
-        /// Note that the Parent of the extension will be the module context the
-        /// extension is declared inside.
-        public let extendedContext: Int32
-        // RelativeDirectPointer<const char> ExtendedContext;
-    }
-
-    @inlinable
-    public static func genericArgumentOffset() -> Int {
-        fatalError("Not a generic context descriptor")
+    public func followingTrailingObjectsCount(of layout: AnyLayout) -> UInt {
+        // The kind-specific flags area is used to store the count of the generic
+        // arguments for underlying type(s) encoded in the descriptor.
+        UInt(flags.kindSpecificFlags)
     }
 }

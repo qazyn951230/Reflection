@@ -20,20 +20,67 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public protocol TrailingContainer {
-    static var trailingTypes: [Any.Type] { get }
+// .../swift/include/swift/ABI/TrailingObjects.h!TrailingObjects
 
-    static func trailingObjectsCount(of metadata: Metadata) -> Int
-    static func trailingObjectsSize(of metadata: Metadata) -> Int
-    static func trailingObjectsAlignment(of metadata: Metadata) -> Int
+/// A `TrailingContainer` represents such a structure:
+///
+/// | self  |   v1          |   v2          |
+/// | ----- | ------------- | ------------- |
+/// |   0   |   v1_count    |   v2_count    |
+///
+/// then:
+/// ```c++
+/// v1* t = reinterpret_cast<v1>(this) + v1_count;
+/// v2* x = reinterpret_cast<v2>(v1) + v2_count;
+/// ```
+///
+/// If we have an object like:
+///
+/// ```c++
+/// class VarLengthObj : private TrailingObjects<VarLengthObj, int, double> {
+///   friend TrailingObjects;
+///
+///   unsigned NumInts, NumDoubles;
+///   size_t numTrailingObjects(OverloadToken<int>) const { return NumInts; }
+///  };
+/// ```
+///
+/// the corresponding Swift code is:
+///
+/// ```swift
+/// class VarLengthObj: TrailingContainer {
+///     static var trailingTypes: [AnyLayout] {
+///         [AnyLayout(Int32.self), AnyLayout(Double.self)]
+///     }
+///     func trailingObjectsCount(of layout: AnyLayout) -> UInt {
+///         switch layout {
+///         case Int32.self:
+///             return 1 // NumInts
+///         default:
+///             return 0
+///         }
+///     }
+/// }
+/// ```
+public protocol TrailingContainer {
+    static var trailingTypes: [AnyLayout] { get }
+
+    func trailingObjectsCount(of layout: AnyLayout) -> UInt
 
     func trailingObjects<T>() -> UnsafePointer<T>
 }
 
-/// Aligns \c Addr to \c Alignment bytes, rounding up.
+extension TrailingContainer {
+    @_transparent
+    public func trailingObjects<T>(as type: T.Type) -> UnsafePointer<T> {
+        trailingObjects()
+    }
+}
+
+/// Aligns `pointer` to `alignment` bytes, rounding up.
 ///
 /// Alignment should be a power of two.  This method rounds up, so
-/// alignAddr(7, 4) == 8 and alignAddr(8, 4) == 8.
+/// `aligned(7, alignment: 4) == 8` and `aligned(8, alignment: 4) == 8`.
 /// ```c++
 /// inline uintptr_t alignAddr(const void *Addr, size_t Alignment) {
 ///   assert(Alignment && isPowerOf2_64((uint64_t)Alignment) &&
@@ -51,65 +98,44 @@ private func aligned(_ pointer: UnsafeRawPointer, alignment: UInt) -> UnsafeRawP
 }
 
 extension TrailingContainer where Self: UnsafeRawRepresentable {
-    private static func callObjectsCount(of metadata: Metadata) -> Int {
-        switch metadata {
+    private func callObjectsCount(of layout: AnyLayout) -> UInt {
+        switch layout {
         case RawValue.self:
             return 1
         default:
-            return trailingObjectsCount(of: metadata)
+            return trailingObjectsCount(of: layout)
         }
     }
 
-    private static func callObjectsSize(of metadata: Metadata) -> UInt {
-        switch metadata {
-        case RawValue.self:
-            return UInt(MemoryLayout<RawValue>.size)
-        default:
-            return UInt(trailingObjectsSize(of: metadata))
-        }
-    }
-
-    private static func callObjectsAlignment(of metadata: Metadata) -> UInt {
-        switch metadata {
-        case RawValue.self:
-            return UInt(MemoryLayout<RawValue>.alignment)
-        default:
-            return UInt(trailingObjectsAlignment(of: metadata))
-        }
-    }
-
-    private static func resolve(base: UnsafeRawPointer, current: Metadata, next: Metadata) -> UnsafeRawPointer {
-        let pointer = UInt(bitPattern: base) + callObjectsSize(of: current)
-        let realignment = callObjectsAlignment(of: current) < callObjectsAlignment(of: next)
+    private func resolve(base: UnsafeRawPointer, current: AnyLayout, next: AnyLayout) -> UnsafeRawPointer {
+        // let pointer = base.reinterpretCast(to: Current.self)
+        //     .advanced(by: Current.self)
+        let address = UInt(bitPattern: base) + UInt(current._size) * callObjectsCount(of: current)
+        let realignment = current._alignment < next._alignment
         if realignment {
-            return aligned(UnsafeRawPointer(bitPattern: pointer).unsafelyUnwrapped,
-                           alignment: callObjectsAlignment(of: next))
+            return aligned(UnsafeRawPointer(bitPattern: address).unsafelyUnwrapped,
+                           alignment: UInt(next._alignment))
         } else {
-            return UnsafeRawPointer(bitPattern: pointer).unsafelyUnwrapped
+            return UnsafeRawPointer(bitPattern: address).unsafelyUnwrapped
         }
     }
 
     public func trailingObjects<T>() -> UnsafePointer<T> {
-        let target = Metadata.load(from: T.self)
+        let target = AnyLayout(T.self)
         let i = Self.trailingTypes.firstIndex { $0 == target }
         guard let count = i else {
             fatalError("Not trailing objects")
         }
         var index = 0
-        var current = Metadata.load(from: RawValue.self)
+        var current = AnyLayout(RawValue.self)
         var base = rawValue.reinterpretCast()
-        var next = Metadata.load(from: Self.trailingTypes[index])
+        var next = Self.trailingTypes[index]
         while index <= count {
-            base = Self.resolve(base: base, current: current, next: next)
+            base = resolve(base: base, current: current, next: next)
             index += 1
             current = next
-            next = Metadata.load(from: Self.trailingTypes[index])
+            next = Self.trailingTypes[index]
         }
         return base.reinterpretCast(to: T.self)
-    }
-
-    @_transparent
-    public func trailingObjects<T>(as type: T.Type) -> UnsafePointer<T> {
-        trailingObjects()
     }
 }

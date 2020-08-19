@@ -20,39 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyContextDescriptor {
-    private let box: _AnyContextDescriptorBox
+/// The portion of a class metadata object that is compatible with
+/// all classes, even non-Swift ones.
+public struct AnyClassMetadata: TargetAnyClassMetadata {
+    public let rawValue: UnsafePointer<RawValue>
 
-    public init<T>(_ value: T) where T: TargetContextDescriptor {
-        box = _AnyContextDescriptor<T>(value)
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
     }
 
-    public var kind: ContextDescriptorKind {
-        box.kind
-    }
+    public struct RawValue: RawTargetAnyClassMetadata {
+        public let kind: UInt
+        public let superclass: UnsafeRawPointer
 
-    public var parent: ContextDescriptor? {
-        box.parent
-    }
-}
-
-private protocol _AnyContextDescriptorBox {
-    var kind: ContextDescriptorKind { get }
-    var parent: ContextDescriptor? { get }
-}
-
-private final class _AnyContextDescriptor<T>: _AnyContextDescriptorBox where T: TargetContextDescriptor {
-    let value: T
-
-    init(_ value: T) {
-        self.value = value
-    }
-
-    var kind: ContextDescriptorKind {
-        value.kind
-    }
-
-    var parent: ContextDescriptor? {
-        value.parent
+#if SWIFT_OBJC_INTEROP
+        public let cachedData1: UnsafeRawPointer
+        public let cachedData2: UnsafeRawPointer
+        public let data: UInt
+#endif
     }
 }

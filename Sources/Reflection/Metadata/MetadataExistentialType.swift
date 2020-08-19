@@ -20,39 +20,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyContextDescriptor {
-    private let box: _AnyContextDescriptorBox
+/// The structure of existential type metadata.
+public struct ExistentialTypeMetadata: TargetMetadata { // TargetExistentialTypeMetadata
+    public let rawValue: UnsafePointer<RawValue>
 
-    public init<T>(_ value: T) where T: TargetContextDescriptor {
-        box = _AnyContextDescriptor<T>(value)
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
     }
 
-    public var kind: ContextDescriptorKind {
-        box.kind
+    public var flags: ExistentialTypeFlags {
+        ExistentialTypeFlags(rawValue.pointee.flags)
     }
 
-    public var parent: ContextDescriptor? {
-        box.parent
-    }
-}
-
-private protocol _AnyContextDescriptorBox {
-    var kind: ContextDescriptorKind { get }
-    var parent: ContextDescriptor? { get }
-}
-
-private final class _AnyContextDescriptor<T>: _AnyContextDescriptorBox where T: TargetContextDescriptor {
-    let value: T
-
-    init(_ value: T) {
-        self.value = value
+    public var protocolsCount: UInt32 {
+        rawValue.pointee.protocolsCount
     }
 
-    var kind: ContextDescriptorKind {
-        value.kind
+    public func superclassConstraint() -> UnsafePointer<Metadata>? {
+        nil
     }
 
-    var parent: ContextDescriptor? {
-        value.parent
+    public struct RawValue: RawTargetMetadata {
+        public let kind: UInt
+        public let flags: UInt32 // ExistentialTypeFlags
+        public let protocolsCount: UInt32 // NumProtocols
     }
 }

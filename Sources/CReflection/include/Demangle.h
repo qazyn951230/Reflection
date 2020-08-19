@@ -64,6 +64,8 @@ dnode_p SP_NULLABLE demangler_demangle_type_block(demangler_p demangler, const u
 
 dnode_p demangler_create_node(demangler_p demangler, CRDNodeKind kind);
 dnode_p demangler_create_node_index(demangler_p demangler, CRDNodeKind kind, NSUInteger pointer);
+dnode_p demangler_create_node_char(demangler_p demangler, CRDNodeKind kind, const char* name);
+dnode_p demangler_create_node_uint8(demangler_p demangler, CRDNodeKind kind, const uint8_t* name);
 
 CRDNodeKind dnode_get_kind(dnode_p node);
 uint64_t dnode_get_index(dnode_p node);

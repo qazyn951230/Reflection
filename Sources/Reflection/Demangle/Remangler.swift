@@ -22,12 +22,12 @@
 
 #if ENABLE_REFLECTION_DEMANGLE
 
-import Darwin.C
 @_implementationOnly import CReflection
+import Darwin.C
 
 func mangleNode(_ node: DNodeRef) -> String {
     var name = ""
-    remangle_node(node.ref) { (data, size) in
+    remangle_node(node.ref) { data, size in
         name = String(cString: data, size: size)
     }
     return name
@@ -35,7 +35,7 @@ func mangleNode(_ node: DNodeRef) -> String {
 
 func mangleNode(_ node: DNodeRef, resolver: symbolic_resolver_t) -> String {
     var name = ""
-    remangle_node_block(node.ref, resolver) { (data, size) in
+    remangle_node_block(node.ref, resolver) { data, size in
         name = String(cString: data, size: size)
     }
     return name
@@ -43,7 +43,7 @@ func mangleNode(_ node: DNodeRef, resolver: symbolic_resolver_t) -> String {
 
 func mangleNode(_ node: DNodeRef, resolver: symbolic_resolver_t, in demangler: Demangler) -> String {
     var name = ""
-    remangle_node_factory(node.ref, resolver, demangler.ref) { (data, size) in
+    remangle_node_factory(node.ref, resolver, demangler.ref) { data, size in
         name = String(cString: data, size: size)
     }
     return name
@@ -63,7 +63,7 @@ extension String {
             self.init(cString: buffer)
         }
     }
-    
+
     public init(cString: UnsafePointer<UInt8>, size: Int) {
         if cString.advanced(by: size).pointee == 0 || strnlen(cString.reinterpretCast(to: Int8.self), size) <= size {
             self.init(cString: cString)

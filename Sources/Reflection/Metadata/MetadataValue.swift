@@ -20,39 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyContextDescriptor {
-    private let box: _AnyContextDescriptorBox
+/// The common structure of metadata for structs and enums.
+public struct ValueMetadata: TargetValueMetadata {
+    public let rawValue: UnsafePointer<RawValue>
 
-    public init<T>(_ value: T) where T: TargetContextDescriptor {
-        box = _AnyContextDescriptor<T>(value)
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
     }
 
-    public var kind: ContextDescriptorKind {
-        box.kind
-    }
-
-    public var parent: ContextDescriptor? {
-        box.parent
-    }
-}
-
-private protocol _AnyContextDescriptorBox {
-    var kind: ContextDescriptorKind { get }
-    var parent: ContextDescriptor? { get }
-}
-
-private final class _AnyContextDescriptor<T>: _AnyContextDescriptorBox where T: TargetContextDescriptor {
-    let value: T
-
-    init(_ value: T) {
-        self.value = value
-    }
-
-    var kind: ContextDescriptorKind {
-        value.kind
-    }
-
-    var parent: ContextDescriptor? {
-        value.parent
+    public struct RawValue: RawTargetValueMetadata {
+        public let kind: UInt
+        public let description: UnsafeRawPointer
     }
 }

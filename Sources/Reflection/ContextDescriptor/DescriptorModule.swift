@@ -20,39 +20,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyContextDescriptor {
-    private let box: _AnyContextDescriptorBox
+// .../swift/include/swift/ABI/Metadata.h!TargetModuleContextDescriptor
 
-    public init<T>(_ value: T) where T: TargetContextDescriptor {
-        box = _AnyContextDescriptor<T>(value)
-    }
+/// Descriptor for a module context.
+public struct ModuleContextDescriptor: TargetContextDescriptor {
+    public let rawValue: UnsafePointer<RawValue>
 
-    public var kind: ContextDescriptorKind {
-        box.kind
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
     }
 
     public var parent: ContextDescriptor? {
-        box.parent
-    }
-}
-
-private protocol _AnyContextDescriptorBox {
-    var kind: ContextDescriptorKind { get }
-    var parent: ContextDescriptor? { get }
-}
-
-private final class _AnyContextDescriptor<T>: _AnyContextDescriptorBox where T: TargetContextDescriptor {
-    let value: T
-
-    init(_ value: T) {
-        self.value = value
+        guard let address = RelativeIndirectablePointer.resolve(any: rawValue, keyPath: \RawValue.parent) else {
+            return nil
+        }
+        return ContextDescriptor.cast(from: address)
     }
 
-    var kind: ContextDescriptorKind {
-        value.kind
+    var cName: UnsafePointer<Int8> {
+        RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.name)
+            .reinterpretCast(to: Int8.self)
     }
 
-    var parent: ContextDescriptor? {
-        value.parent
+    public var name: String {
+        return String(cString: cName)
+    }
+
+    public struct RawValue: RawTargetContextDescriptor {
+        public let flags: UInt32
+        public let parent: Int32
+        // RelativeDirectPointer<const char, /*nullable*/ false> Name;
+        public let name: Int32
     }
 }

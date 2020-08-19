@@ -20,39 +20,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyContextDescriptor {
-    private let box: _AnyContextDescriptorBox
+import XCTest
+@testable import Reflection
 
-    public init<T>(_ value: T) where T: TargetContextDescriptor {
-        box = _AnyContextDescriptor<T>(value)
-    }
-
-    public var kind: ContextDescriptorKind {
-        box.kind
-    }
-
-    public var parent: ContextDescriptor? {
-        box.parent
-    }
+private struct Apple {
+    let value: Int
+    let text: String
 }
 
-private protocol _AnyContextDescriptorBox {
-    var kind: ContextDescriptorKind { get }
-    var parent: ContextDescriptor? { get }
-}
-
-private final class _AnyContextDescriptor<T>: _AnyContextDescriptorBox where T: TargetContextDescriptor {
+private struct Banana<T> {
     let value: T
+}
 
-    init(_ value: T) {
-        self.value = value
+final class StructDescriptorTests: XCTestCase {
+    let aType: Any.Type = Apple.self
+    let bType: Any.Type = Banana<UInt>.self
+    
+    var aDescriptor: StructDescriptor!
+    var bDescriptor: StructDescriptor!
+    
+    override func setUp() {
+        aDescriptor = StructMetadata.load(from: aType).description
+        bDescriptor = StructMetadata.load(from: bType).description
     }
-
-    var kind: ContextDescriptorKind {
-        value.kind
+    
+    func testBasicProperty() {
+        XCTAssertEqual(aDescriptor.name, "Apple")
+        XCTAssertEqual(bDescriptor.name, "Banana")
+        
+        XCTAssertFalse(aDescriptor.isGeneric)
+        XCTAssertTrue(bDescriptor.isGeneric)
+        
+        // parent is ReflectionTests module
+        XCTAssertNotNil(aDescriptor.parent)
+        XCTAssertNotNil(bDescriptor.parent)
+        
+        XCTAssertEqual(aDescriptor.fieldCount, 2)
+        XCTAssertEqual(bDescriptor.fieldCount, 1)
     }
-
-    var parent: ContextDescriptor? {
-        value.parent
-    }
+    
+    static var allTests = [
+        ("testBasicProperty", testBasicProperty),
+    ]
 }

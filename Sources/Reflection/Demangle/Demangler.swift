@@ -66,113 +66,91 @@ class Demangler {
     func createNode(kind: DNodeKind, pointer: UInt) -> DNodeRef {
         DNodeRef(ref: demangler_create_node_index(ref, kind, pointer))
     }
-}
 
-struct DNodeRef {
-    let ref: dnode_p
-
+    @discardableResult
     @inlinable
-    func appendChild(_ child: DNodeRef, in demangler: Demangler) {
-        dnode_append_child(ref, child.ref, demangler.ref)
+    func createNode(kind: DNodeKind, text: UnsafePointer<Int8>) -> DNodeRef {
+        DNodeRef(ref: demangler_create_node_char(ref, kind, text))
     }
 
+    @discardableResult
     @inlinable
-    var kind: DNodeKind {
-        dnode_get_kind(ref)
-    }
-
-    @inlinable
-    var childCount: Int {
-        dnode_children_count(ref)
-    }
-
-    @inlinable
-    var isSpecialized: Bool {
-        dnode_is_specialized(ref)
-    }
-
-    @inlinable
-    var index: UInt64 {
-        dnode_get_index(ref)
-    }
-
-    @inlinable
-    var text: String {
-        String(cString: dnode_get_text(ref, nil))
-    }
-
-    @inlinable
-    func unspecialized(in demangler: Demangler) -> DNodeRef {
-        DNodeRef(ref: dnode_get_unspecialized(ref, demangler.ref))
-    }
-
-    @inlinable
-    func child(at index: Int) -> DNodeRef {
-        DNodeRef(ref: dnode_child_at_index(ref, index))
-    }
-
-    @inlinable
-    func textEquals(_ value: String) -> Bool {
-        dnode_is_text_equals(ref, value)
-    }
-
-    @inlinable
-    subscript(index: Int) -> DNodeRef {
-        child(at: index)
+    func createNode(kind: DNodeKind, text: UnsafePointer<UInt8>) -> DNodeRef {
+        DNodeRef(ref: demangler_create_node_uint8(ref, kind, text))
     }
 }
 
-// .../swift/stdlib/public/runtime/Private.h!swift::ResolveAsSymbolicReference
-// ../swift/stdlib/public/runtime/MetadataLookup.cpp!swift::ResolveAsSymbolicReference::operator()
-@_transparent
-func resolveAsSymbolicReference(demangler: Demangler) -> symbolic_reference_resolver_t {
-    return { a, b, c, d in
-        _resolveAsSymbolicReference(demangler: demangler, kind: a, directness: b, offset: c, base: d)
-    }
-}
-
-func _resolveAsSymbolicReference(demangler: Demangler, kind: SymbolicReferenceKind, directness: Directness,
-                                 offset: Int32, base: UnsafeRawPointer) -> dnode_p? {
-    var addresss = applyRelativeOffset(base, Int(offset))
-    if directness == .indirect {
-        addresss = UnsafePointer<UInt>(bitPattern: addresss).unsafelyUnwrapped
-            .pointee
-    }
-    let nodeKind: DNodeKind
-    let isType: Bool
-    switch kind {
-    case .context:
-        let pointer = UnsafeRawPointer(bitPattern: addresss).unsafelyUnwrapped
-        let descriptor = ContextDescriptor.cast(from: pointer)
-        switch descriptor.kind {
-        case .protocol:
-            nodeKind = .protocolSymbolicReference
-            isType = false
-        case .opaqueType:
-            nodeKind = .opaqueTypeDescriptorSymbolicReference
-            isType = false
-        // descriptor is TargetTypeContextDescriptor
-        case .class, .struct, .enum:
-            nodeKind = .typeSymbolicReference
-            isType = true
-        default:
-            // References to other kinds of context aren't yet implemented.
+// .../swift/stdlib/public/runtime/Demangle.cpp!swift::_buildDemanglingForContext
+func buildDemanglingForContext(demangler: Demangler, context: ContextDescriptor,
+                               demangledGenerics: [DNodeRef]) -> dnode_p {
+    // getGenericArgsTypeListForContext
+    func genericArgsTypeList(for descriptor: ContextDescriptor) -> DNodeRef? {
+        guard !demangledGenerics.isEmpty,
+            context.kind != .anonymous,
+            let generics = context.genericContext() else {
             return nil
         }
-    case .accessorFunctionReference:
-        nodeKind = .accessorFunctionReference
-        isType = false
-    @unknown default:
-        fatalError("Unknown case of SymbolicReferenceKind")
+        let count = Int(generics.fullGenericContextHeader().parametersCount)
+        if count <= usedDemangledGenerics {
+            return nil
+        }
+        let list = demangler.createNode(kind: .typeList)
+        while usedDemangledGenerics < count {
+            list.appendChild(demangledGenerics[usedDemangledGenerics], in: demangler)
+            usedDemangledGenerics += 1
+        }
+        return list
     }
-    let node = demangler.createNode(kind: nodeKind, pointer: addresss)
-    if isType {
-        let typeNode = demangler.createNode(kind: .type)
-        typeNode.appendChild(node, in: demangler)
-        return typeNode.ref
-    } else {
-        return node.ref
+
+    var usedDemangledGenerics = 0
+    var node: DNodeRef?
+    let descriptorPath = context.parents().reversed()
+    for component in descriptorPath {
+        switch component.kind {
+        case .module:
+            assert(node == nil, "module should be top level")
+            let name = component.as(ModuleContextDescriptor.self).cName
+            node = demangler.createNode(kind: .module, text: name)
+        case .extension:
+            let extendedContext = component.as(ExtensionContextDescriptor.self).extendedContext
+            // Demangle the extension self type.
+            var selfType = demangler.demangleType(
+                mangledName: extendedContext,
+                resolver: resolveToDemanglingForContext(in: demangler)
+            ).unsafelyUnwrapped
+            if selfType.kind == .type {
+                selfType = selfType.child(at: 0)
+            }
+            // Substitute in the generic arguments.
+            let argsList = genericArgsTypeList(for: context)
+            switch selfType.kind {
+            case .boundGenericEnum, .boundGenericStructure,
+                 .boundGenericClass, .boundGenericOtherNominalType:
+                if let genericArgsList = argsList {
+                    let subSelfType = demangler.createNode(kind: selfType.kind)
+                    subSelfType.appendChild(selfType.child(at: 0), in: demangler)
+                    subSelfType.appendChild(genericArgsList, in: demangler)
+                    selfType = subSelfType
+                }
+            default:
+                // TODO: Use the unsubstituted type if we can't handle the
+                // substitutions yet.
+                selfType = selfType.child(at: 0).child(at: 0)
+            }
+            let extNode = demangler.createNode(kind: .extension)
+            assert(node != nil)
+            extNode.appendChild(any: node, in: demangler)
+            extNode.appendChild(selfType, in: demangler)
+            // TODO: Turn the generic signature into a demangling as the third
+            // generic argument.
+            node = extNode
+        case .protocol:
+            fallthrough
+        default:
+            fatalError()
+        }
     }
+    fatalError("invalid symbolic reference kind")
 }
 
 extension Demangler {

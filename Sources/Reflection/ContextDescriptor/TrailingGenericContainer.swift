@@ -43,66 +43,36 @@ extension TrailingGenericHeader {
 public protocol TrailingGenericContainer: TrailingContainer {
     associatedtype Header: TrailingGenericHeader = GenericContextDescriptorHeader
 
-    static var followingTrailingTypes: [Any.Type] { get }
+    static var followingTrailingTypes: [AnyLayout] { get }
 
-    static func followingTrailingObjectsSize(of metadata: Metadata) -> Int
-    static func followingTrailingObjectsCount(of metadata: Metadata) -> Int
-    static func followingTrailingObjectsAlignment(of metadata: Metadata) -> Int
+    func followingTrailingObjectsCount(of layout: AnyLayout) -> UInt
 
     func genericContextHeader() -> GenericContextDescriptorHeader
     func fullGenericContextHeader() -> Header
 }
 
 extension TrailingGenericContainer {
-    public static var trailingTypes: [Any.Type] {
-        var all: [Any.Type] = [Header.self, GenericParamDescriptor.self,
-                               GenericRequirementDescriptor.self]
+    public static var trailingTypes: [AnyLayout] {
+        var all = [AnyLayout(Header.self), AnyLayout(GenericParamDescriptor.self),
+                   AnyLayout(GenericRequirementDescriptor.self)]
         all.append(contentsOf: followingTrailingTypes)
         return all
     }
 
-    public static var followingTrailingTypes: [Any.Type] { [] }
+    public static var followingTrailingTypes: [AnyLayout] { [] }
 
-    public static func trailingObjectsSize(of metadata: Metadata) -> Int {
-        switch metadata {
-        case Header.self:
-            return MemoryLayout<Header>.size
-        default:
-            return followingTrailingObjectsSize(of: metadata)
-        }
-    }
-
-    public static func trailingObjectsCount(of metadata: Metadata) -> Int {
-        switch metadata {
+    public func trailingObjectsCount(of layout: AnyLayout) -> UInt {
+        switch layout {
         case Header.self, GenericParamDescriptor.self,
              GenericRequirementDescriptor.self:
             return 0
         default:
-            return followingTrailingObjectsCount(of: metadata)
+            return followingTrailingObjectsCount(of: layout)
         }
     }
 
-    public static func trailingObjectsAlignment(of metadata: Metadata) -> Int {
-        switch metadata {
-        case Header.self:
-            return MemoryLayout<Header>.alignment
-        default:
-            return followingTrailingObjectsAlignment(of: metadata)
-        }
-    }
-
-    public static func followingTrailingObjectsSize(of metadata: Metadata) -> Int {
-        assert(followingTrailingTypes.isEmpty)
-        return 0
-    }
-
-    public static func followingTrailingObjectsCount(of metadata: Metadata) -> Int {
-        assert(followingTrailingTypes.isEmpty)
-        return 0
-    }
-
-    public static func followingTrailingObjectsAlignment(of metadata: Metadata) -> Int {
-        assert(followingTrailingTypes.isEmpty)
+    public func followingTrailingObjectsCount(of layout: AnyLayout) -> UInt {
+        assert(Self.followingTrailingTypes.isEmpty)
         return 0
     }
 
@@ -117,16 +87,16 @@ extension TrailingGenericContainer {
 }
 
 extension TrailingGenericContainer where Self: TargetContextDescriptor {
-    public func trailingObjectsCount(of metadata: Metadata) -> Int {
-        switch metadata {
+    public func trailingObjectsCount(of layout: AnyLayout) -> UInt {
+        switch layout {
         case Header.self:
             return isGeneric ? 1 : 0
         case GenericParamDescriptor.self:
-            return Int(genericContextHeader().parametersCount)
+            return UInt(genericContextHeader().parametersCount)
         case GenericRequirementDescriptor.self:
-            return Int(genericContextHeader().requirementsCount)
+            return UInt(genericContextHeader().requirementsCount)
         default:
-            return Self.followingTrailingObjectsCount(of: metadata)
+            return followingTrailingObjectsCount(of: layout)
         }
     }
 }

@@ -63,6 +63,14 @@ dnode_p demangler_create_node_index(demangler_p demangler, CRDNodeKind kind, NSU
     return wrap(unwrap(demangler)->createNode(static_cast<Node::Kind>(kind), static_cast<uint64_t>(pointer)));
 }
 
+dnode_p demangler_create_node_char(demangler_p demangler, CRDNodeKind kind, const char* name) {
+    return wrap(unwrap(demangler)->createNode(static_cast<Node::Kind>(kind), name));
+}
+
+dnode_p demangler_create_node_uint8(demangler_p demangler, CRDNodeKind kind, const uint8_t* name) {
+    return wrap(unwrap(demangler)->createNode(static_cast<Node::Kind>(kind), reinterpret_cast<const char*>(name)));
+}
+
 CRDNodeKind dnode_get_kind(dnode_p node) {
     return static_cast<CRDNodeKind>(unwrap(node)->getKind());
 }

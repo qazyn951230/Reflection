@@ -20,39 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-public struct AnyContextDescriptor {
-    private let box: _AnyContextDescriptorBox
+/// The structure of type metadata for enums.
+public struct EnumMetadata: TargetValueMetadata { // TargetEnumDescriptor
+    public typealias RawValue = ValueMetadata.RawValue
 
-    public init<T>(_ value: T) where T: TargetContextDescriptor {
-        box = _AnyContextDescriptor<T>(value)
-    }
+    public let rawValue: UnsafePointer<RawValue>
+    public let description: EnumDescriptor
 
-    public var kind: ContextDescriptorKind {
-        box.kind
-    }
-
-    public var parent: ContextDescriptor? {
-        box.parent
-    }
-}
-
-private protocol _AnyContextDescriptorBox {
-    var kind: ContextDescriptorKind { get }
-    var parent: ContextDescriptor? { get }
-}
-
-private final class _AnyContextDescriptor<T>: _AnyContextDescriptorBox where T: TargetContextDescriptor {
-    let value: T
-
-    init(_ value: T) {
-        self.value = value
-    }
-
-    var kind: ContextDescriptorKind {
-        value.kind
-    }
-
-    var parent: ContextDescriptor? {
-        value.parent
+    public init(rawValue: UnsafePointer<RawValue>) {
+        self.rawValue = rawValue
+        description = EnumDescriptor.cast(from: rawValue.pointee.description)
     }
 }

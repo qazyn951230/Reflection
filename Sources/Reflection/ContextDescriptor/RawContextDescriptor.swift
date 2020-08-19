@@ -34,7 +34,7 @@ public protocol TargetContextDescriptor: UnsafeRawRepresentable where RawValue: 
     var kind: ContextDescriptorKind { get }
     var parent: ContextDescriptor? { get }
 
-    static func genericArgumentOffset() -> Int
+    static func genericArgumentOffset() -> Int?
 }
 
 extension TargetContextDescriptor {
@@ -54,6 +54,15 @@ extension TargetContextDescriptor {
     @_transparent
     public var isUnique: Bool {
         flags.isUnique
+    }
+
+    @inlinable
+    public static func genericArgumentOffset() -> Int? {
+#if DEBUG
+        fatalError("Not a generic context descriptor")
+#else
+        return -1
+#endif
     }
 }
 
@@ -80,20 +89,29 @@ extension TargetContextDescriptor where Self: TrailingGenericContainer {
         return ArrayRef(start: start, count: Int(count))
     }
 
+    @_transparent
+    static func _genericArgumentOffset() -> Int {
+#if DEBUG
+        return genericArgumentOffset()!
+#else
+        return Self.genericArgumentOffset() ?? 0
+#endif
+    }
+
     public func genericArguments(of metadata: Metadata) -> UnsafePointer<UnsafePointer<Metadata.RawValue>> {
         let raw = metadata.rawValue.reinterpretCast(to: UnsafePointer<Metadata.RawValue>.self)
-        return raw + Self.genericArgumentOffset()
+        return raw + Self._genericArgumentOffset()
     }
 
     public func genericArguments<T>(metadata: T) -> UnsafePointer<UnsafePointer<Metadata.RawValue>>
         where T: TargetMetadata {
         let raw = metadata.rawValue.reinterpretCast(to: UnsafePointer<Metadata.RawValue>.self)
-        return raw + Self.genericArgumentOffset()
+        return raw + Self._genericArgumentOffset()
     }
 
     public func genericArguments(of metadata: AnyMetadata) -> UnsafePointer<UnsafePointer<Metadata.RawValue>> {
         let raw = metadata.rawValue.reinterpretCast(to: UnsafePointer<Metadata.RawValue>.self)
-        return raw + Self.genericArgumentOffset()
+        return raw + Self._genericArgumentOffset()
     }
 }
 
@@ -128,14 +146,13 @@ public protocol TargetTypeContextDescriptor: TargetContextDescriptor where RawVa
 }
 
 extension TargetTypeContextDescriptor {
+//    var cName: UnsafePointer<Int8> {
+//        RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.name)
+//            .reinterpretCast(to: Int8.self)
+//    }
+//
 //    public var name: String {
-//        let name = rawValue.pointee.name
-//        guard name != 0, let offset = MemoryLayout.offset(of: \RawValue.name) else {
-//            return ""
-//        }
-//        let c = rawValue.reinterpretCast(to: Int8.self)
-//            .advanced(by: offset + Int(name))
-//        return String(cString: c)
+//        return String(cString: cName)
 //    }
 
     @_transparent
@@ -143,10 +160,11 @@ extension TargetTypeContextDescriptor {
         rawValue.pointee.accessFunction
     }
 
-    public var fields: FieldDescriptor? {
-        ContextDescriptor.rawFields(self)
-            .map(FieldDescriptor.init(rawValue:))
-    }
+//    public var fields: FieldDescriptor? {
+//        let raw = RelativeDirectPointer.resolve(any: rawValue, keyPath: \RawValue.fields)
+//        return (raw?.reinterpretCast(to: FieldDescriptor.RawValue.self))
+//            .map(FieldDescriptor.init(rawValue:))
+//    }
 
     @_transparent
     public var isReflectable: Bool {

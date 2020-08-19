@@ -89,7 +89,7 @@ func findExtendedTypeContextDescriptor(
     }
     let ext = descriptor.as(ExtensionContextDescriptor.self)
     let _node = demangler.demangleType(mangledName: ext.extendedContext,
-                                       resolver: resolveAsSymbolicReference(demangler: demangler))
+                                       resolver: resolveAsSymbolicReference(in: demangler))
     guard var node = _node else {
         return nil
     }
@@ -130,7 +130,20 @@ func findContextDescriptor(node: DNodeRef, in demangler: Demangler) -> ContextDe
     if symbolicNode.kind == .dependentGenericParamType {
         return nil
     }
+    let mangledName = mangleNode(node)
     return nil
+}
+
+func buildDemanglingForSymbolicReference(demangler: Demangler, kind: SymbolicReferenceKind,
+                                         resolvedReference: UnsafeRawPointer) -> dnode_p {
+    switch kind {
+    case .context:
+        fatalError("invalid symbolic reference kind")
+    case .accessorFunctionReference:
+        fatalError("invalid symbolic reference kind")
+    @unknown default:
+        fatalError("invalid symbolic reference kind")
+    }
 }
 
 // swift_getTypeByMangledNameImpl
