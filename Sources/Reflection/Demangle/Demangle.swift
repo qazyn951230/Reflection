@@ -20,33 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// .../swift/include/swift/ABI/Metadata.h!TargetOpaqueTypeDescriptor
+#if ENABLE_REFLECTION_DEMANGLE
 
-public struct OpaqueTypeDescriptor: TargetContextDescriptor, TrailingGenericContainer {
-    public typealias RawValue = ContextDescriptor.RawValue
-
-    public let rawValue: UnsafePointer<RawValue>
-
-    public init(rawValue: UnsafePointer<RawValue>) {
-        self.rawValue = rawValue
-    }
-
-    public var parent: ContextDescriptor? {
-        guard let address = RelativeIndirectablePointer.resolve(any: rawValue, keyPath: \RawValue.parent) else {
-            return nil
-        }
-        return ContextDescriptor.cast(from: address)
-    }
-
-    public static var followingTrailingTypes: [AnyLayout] {
-        // [RelativeDirectPointer<const char>]
-        [AnyLayout(Int32.self)]
-    }
-
-    public func followingTrailingObjectsCount(of layout: AnyLayout) -> UInt {
-        assert(layout == Int.self)
-        // The kind-specific flags area is used to store the count of the generic
-        // arguments for underlying type(s) encoded in the descriptor.
-        return UInt(flags.kindSpecificFlags)
-    }
-}
+#endif // ENABLE_REFLECTION_DEMANGLE

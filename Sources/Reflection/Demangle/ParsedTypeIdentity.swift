@@ -20,33 +20,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// .../swift/include/swift/ABI/Metadata.h!TargetOpaqueTypeDescriptor
+#if ENABLE_REFLECTION_DEMANGLE
 
-public struct OpaqueTypeDescriptor: TargetContextDescriptor, TrailingGenericContainer {
-    public typealias RawValue = ContextDescriptor.RawValue
+/// Parsed information about the identity of a type.
+struct ParsedTypeIdentity {
+    /// The user-facing name of the type.
+    let name: String
+    /// The full identity of the type.
+    /// Note that this may include interior '\0' characters.
+    let identity: String
+}
 
-    public let rawValue: UnsafePointer<RawValue>
-
-    public init(rawValue: UnsafePointer<RawValue>) {
-        self.rawValue = rawValue
-    }
-
-    public var parent: ContextDescriptor? {
-        guard let address = RelativeIndirectablePointer.resolve(any: rawValue, keyPath: \RawValue.parent) else {
-            return nil
-        }
-        return ContextDescriptor.cast(from: address)
-    }
-
-    public static var followingTrailingTypes: [AnyLayout] {
-        // [RelativeDirectPointer<const char>]
-        [AnyLayout(Int32.self)]
-    }
-
-    public func followingTrailingObjectsCount(of layout: AnyLayout) -> UInt {
-        assert(layout == Int.self)
-        // The kind-specific flags area is used to store the count of the generic
-        // arguments for underlying type(s) encoded in the descriptor.
-        return UInt(flags.kindSpecificFlags)
+extension ParsedTypeIdentity {
+    // !/swift/stdlib/public/runtime/MetadataLookup.cpp!swift::ParsedTypeIdentity::parse
+    static func parse(context: ContextDescriptor) -> ParsedTypeIdentity {
+        fatalError("Requested context is not TargetTypeContextDescriptor")
     }
 }
+
+#endif // ENABLE_REFLECTION_DEMANGLE

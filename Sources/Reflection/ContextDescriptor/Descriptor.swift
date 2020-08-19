@@ -56,7 +56,7 @@ public struct ContextDescriptor: TargetContextDescriptor {
         return ContextDescriptor.cast(from: address)
     }
 
-    public func parents() -> [ContextDescriptor] {
+    public func tree() -> [ContextDescriptor] {
         var current: ContextDescriptor? = self
         var result: [ContextDescriptor] = []
         while let t = current {

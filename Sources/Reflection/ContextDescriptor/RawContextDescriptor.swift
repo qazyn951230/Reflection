@@ -141,8 +141,8 @@ public protocol TargetTypeContextDescriptor: TargetContextDescriptor where RawVa
     var accessFunction: Int32 { get }
     var fields: FieldDescriptor? { get }
     var isReflectable: Bool { get }
-//    var accessFunction: UnsafeRawPointer
-//    var typeContextDescriptorFlags: TypeContextDescriptorFlags { get}
+//    var accessFunction: UnsafeRawPointer?
+    var typeContextDescriptorFlags: TypeContextDescriptorFlags { get }
 }
 
 extension TargetTypeContextDescriptor {
@@ -169,5 +169,13 @@ extension TargetTypeContextDescriptor {
     @_transparent
     public var isReflectable: Bool {
         rawValue.pointee.fields != 0
+    }
+
+//    public var accessFunction: UnsafeRawPointer? {
+//        RelativeDirectPointer.resolve(any: rawValue, keyPath: \RawValue.accessFunction)
+//    }
+
+    public var typeContextDescriptorFlags: TypeContextDescriptorFlags {
+        TypeContextDescriptorFlags(rawValue: flags.kindSpecificFlags)
     }
 }
