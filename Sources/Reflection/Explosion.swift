@@ -36,11 +36,11 @@ public struct Explosion {
     }
 
     public func properties() -> [ReflectedProperty] {
-        box.properties()
+        box.properties
     }
 
     public func property(at index: Int) -> ReflectedProperty {
-        box.properties()[index]
+        box.properties[index]
     }
 }
 
@@ -61,31 +61,25 @@ public struct ReflectedProperty {
         self.type = type
     }
 
-    public func value<T, K>(as type: K.Type, from object: T) -> K? {
-        guard let offset = self.offset else {
-            return nil
-        }
-        return withUnsafePointer(to: object) { raw in
-            raw.reinterpretCast()
-                .advanced(by: offset)
-                .reinterpretCast(to: type)
-                .pointee
-        }
-    }
+//    public func value<T, K>(as type: K.Type, from object: T) -> K? {
+//        guard let offset = self.offset else {
+//            return nil
+//        }
+//        return withUnsafePointer(to: object) { raw in
+//            raw.reinterpretCast()
+//                .advanced(by: offset)
+//                .reinterpretCast(to: type)
+//                .pointee
+//        }
+//    }
 }
 
 private class ReflectionBox {
-    private var _properties: [ReflectedProperty]?
-
     var propertyCount: Int {
         0
     }
 
-    final func properties() -> [ReflectedProperty] {
-        let p = _properties ?? loadProperties()
-        _properties = p
-        return p
-    }
+    final lazy var properties: [ReflectedProperty] = loadProperties()
 
     func loadProperties() -> [ReflectedProperty] {
         []
@@ -120,6 +114,9 @@ private final class StructReflection: ReflectionBox {
         }
         let description = metadata.description
         let offsets = metadata.fieldOffsets
+        let context = description.genericContext()?.rawValue.reinterpretCast()
+        let arguments = description.genericParameters()?.data.reinterpretCast()
+
         var result: [ReflectedProperty] = []
         var i = 0
         for record in records {
@@ -129,9 +126,8 @@ private final class StructReflection: ReflectionBox {
             } else {
                 offset = nil
             }
-            let type = Metadata.resolveType(by: record.cMangledTypeName,
-                                            context: description.genericContext()?.rawValue.reinterpretCast(),
-                                            arguments: description.genericParameters()?.data.reinterpretCast())
+            let type = Metadata.resolveType(by: record.cMangledTypeName, context: context,
+                                            arguments: arguments)
             result.append(ReflectedProperty(name: record.fieldName, offset: offset, type: type))
             i += 1
         }

@@ -3,15 +3,13 @@
 
 import PackageDescription
 
-let enableDemangle = true
-let demangle: SwiftSetting = enableDemangle ?
-    .define("ENABLE_REFLECTION_DEMANGLE") :
-    .define("DISABLE_REFLECTION_DEMANGLE")
-let dependencies: [Target.Dependency] =
-    enableDemangle ? ["CReflection"] : []
+let enableDemangle = false
+let demangle = enableDemangle ? "ENABLE_REFLECTION_DEMANGLE" : "DISABLE_REFLECTION_DEMANGLE"
+let dependencies: [Target.Dependency] = enableDemangle ? ["CReflection"] : []
+
 let settings: [SwiftSetting] = [
     .define("SWIFT_OBJC_INTEROP"),
-    demangle
+    .define(demangle)
 ]
 
 let package = Package(
@@ -34,7 +32,8 @@ let package = Package(
                 .headerSearchPath("External/swift/include"),
                 .headerSearchPath("External/llvm/include"),
                 .headerSearchPath("External/release/swift/include"),
-                .headerSearchPath("External/release/llvm/include")
+                .headerSearchPath("External/release/llvm/include"),
+                .unsafeFlags(["-Wno-deprecated-declarations"]) // for asl_log in Errors.cpp
             ],
             linkerSettings: [
                 .linkedLibrary("swiftCore"),
