@@ -22,20 +22,31 @@
 
 import Reflection
 import CReflection
-import SwiftUI
+//import SwiftUI
 
 struct Foobar {
     let value = 12
     let bar = false
 }
 
-//let t: Any.Type = Foobar.self // type(of: text)
+let t: Any.Type = Foobar.self // type(of: text)
 //test_print_all_kind(unsafeBitCast(t, to: UnsafeRawPointer.self))
 //test_print_generic_context(unsafeBitCast(t, to: UnsafeRawPointer.self))
 //test_print_properties(unsafeBitCast(t, to: UnsafeRawPointer.self))
 
-//let data = StructMetadata.load(from: t)
-//let fields = data.description.fields!
+//build_demangling_for_metadata(unsafeBitCast(t, to: UnsafeRawPointer.self))
+
+let data = StructMetadata.load(from: t)
+let fields = data.description.fields!
+let field = fields.fieldRecords().first!
+let typeName = field.rawValue.reinterpretCast(to: UInt32.self)
+    .advanced(by: 1)
+    .reinterpretCast(to: Int8.self)
+
+var info = CRTypeInfo()
+getTypeByMangledName(typeName, field.fieldName?.count ?? 0, data.rawValue.reinterpretCast(), &info)
+print(info)
+
 //for i in 0..<fields.fieldRecords().count {
 //    print(data.fieldOffset(at: i) ?? -1)
 //}
@@ -61,14 +72,14 @@ struct Foobar {
 //    - width: 0.0
 //    - height: 0.0
 
-let bar = Foobar()
-Swift.dump(bar)
+//let bar = Foobar()
+//Swift.dump(bar)
 //▿ Demo.Foobar
 //- value: 12
 //- bar: false
 
-print("--------")
-dump(bar)
+//print("--------")
+//dump(bar)
 
 //dump(text)
 // https://unicode-table.com/en/blocks/box-drawing/

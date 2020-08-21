@@ -20,14 +20,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef REFLECTION_CREFLECTION_H
-#define REFLECTION_CREFLECTION_H
+#ifndef REFLECTION_RUNTIME_H
+#define REFLECTION_RUNTIME_H
+
+#if (__cplusplus)
+    #include <cstdint>
+    #include <cstdbool>
+    #include <cstddef>
+#else
+    #include <stdint.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+#endif // (__cplusplus)
 
 #include "Config.h"
-#include "CRDNodeKind.h"
-#include "Demangle.h"
-#include "Reflection.h"
-#include "Test.h"
-#include "Types.h"
 
-#endif // REFLECTION_CREFLECTION_H
+SP_C_FILE_BEGIN
+
+SP_OPAQUE_POINTER(demangler);
+SP_OPAQUE_POINTER(dnode);
+
+struct CRTypeInfo {
+    bool isWeak;
+    bool isUnowned;
+    bool isUnmanaged;
+    const void* SP_NULLABLE metadata;
+};
+
+void getTypeByMangledName(const char* name, size_t length, const void* metadata, struct CRTypeInfo* result);
+
+dnode_p build_demangling_for_metadata(const void* metadata);
+dnode_p build_demangling_for_metadata_in(const void* metadata, demangler_p demangler);
+
+SP_C_FILE_END
+
+#endif // REFLECTION_RUNTIME_H

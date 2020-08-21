@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-let enableDemangle = false
+let enableDemangle = true
 let demangle = enableDemangle ? "ENABLE_REFLECTION_DEMANGLE" : "DISABLE_REFLECTION_DEMANGLE"
 let dependencies: [Target.Dependency] = enableDemangle ? ["CReflection"] : []
 
@@ -33,7 +33,12 @@ let package = Package(
                 .headerSearchPath("External/llvm/include"),
                 .headerSearchPath("External/release/swift/include"),
                 .headerSearchPath("External/release/llvm/include"),
-                .unsafeFlags(["-Wno-deprecated-declarations"]) // for asl_log in Errors.cpp
+                .unsafeFlags([
+                    "-Wno-deprecated-declarations", // for asl_log in Errors.cpp
+                    "-Wno-pointer-bool-conversion",
+                    "-Wno-tautological-pointer-compare",
+                    "-fno-objc-arc"
+                ])
             ],
             linkerSettings: [
                 .linkedLibrary("swiftCore"),
