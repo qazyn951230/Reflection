@@ -12,11 +12,11 @@
 #ifndef SWIFT_RUNTIME_METADATACACHE_H
 #define SWIFT_RUNTIME_METADATACACHE_H
 
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
 #include "swift/Runtime/Concurrent.h"
 #include "swift/Runtime/Metadata.h"
 #include "swift/Runtime/Mutex.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
 #include <condition_variable>
 #include <thread>
 
@@ -42,11 +42,11 @@ public:
 /// A typedef for simple global caches.
 template <class EntryTy>
 using SimpleGlobalCache =
-  ConcurrentMap<EntryTy, /*destructor*/ false, MetadataAllocator>;
+    ConcurrentMap<EntryTy, /*destructor*/ false, MetadataAllocator>;
 
-template <class T, bool ProvideDestructor = true>
-class StaticOwningPointer {
+template <class T, bool ProvideDestructor = true> class StaticOwningPointer {
   T *Ptr;
+
 public:
   StaticOwningPointer(T *ptr = nullptr) : Ptr(ptr) {}
   StaticOwningPointer(const StaticOwningPointer &) = delete;
@@ -57,9 +57,9 @@ public:
   T *operator->() const { return Ptr; }
 };
 
-template <class T>
-class StaticOwningPointer<T, false> {
+template <class T> class StaticOwningPointer<T, false> {
   T *Ptr;
+
 public:
   StaticOwningPointer(T *ptr = nullptr) : Ptr(ptr) {}
   StaticOwningPointer(const StaticOwningPointer &) = delete;
@@ -100,20 +100,17 @@ public:
   ConcurrencyControl &getConcurrency() { return *Concurrency; }
 
   template <class KeyType, class... ArgTys>
-  std::pair<EntryType*, bool>
-  getOrInsert(KeyType key, ArgTys &&...args) {
+  std::pair<EntryType *, bool> getOrInsert(KeyType key, ArgTys &&... args) {
     return Map.getOrInsert(key, args...);
   }
 
-  template <class KeyType>
-  EntryType *find(KeyType key) {
+  template <class KeyType> EntryType *find(KeyType key) {
     return Map.find(key);
   }
 
   /// A default implementation for resolveEntry that assumes that the
   /// key type is a lookup key for the map.
-  template <class KeyType>
-  EntryType *resolveExistingEntry(KeyType key) {
+  template <class KeyType> EntryType *resolveExistingEntry(KeyType key) {
     auto entry = Map.find(key);
     assert(entry && "entry doesn't already exist!");
     return entry;
@@ -169,17 +166,16 @@ public:
   MetadataAllocator &getAllocator() { return Storage.getAllocator(); }
 
   template <class KeyType, class... ArgTys>
-  std::pair<EntryType*, Status>
-  getOrInsert(KeyType key, ArgTys &&...args) {
+  std::pair<EntryType *, Status> getOrInsert(KeyType key, ArgTys &&... args) {
     auto result = Storage.getOrInsert(key, args...);
     auto entry = result.first;
 
-    // If we are not inserting the entry, we need to potentially block on 
+    // If we are not inserting the entry, we need to potentially block on
     // currently satisfies our conditions.
     if (!result.second) {
       auto status =
-        entry->await(Storage.getConcurrency(), std::forward<ArgTys>(args)...);
-      return { entry, status };
+          entry->await(Storage.getConcurrency(), std::forward<ArgTys>(args)...);
+      return {entry, status};
     }
 
     // Okay, we inserted.  We are responsible for allocating and
@@ -188,33 +184,31 @@ public:
     // Allocation.  This can fast-path and bypass initialization by returning
     // a status.
     if (auto status =
-          entry->beginAllocation(Storage.getConcurrency(), args...)) {
-      return { entry, *status };
+            entry->beginAllocation(Storage.getConcurrency(), args...)) {
+      return {entry, *status};
     }
 
     // Initialization.
     auto status = entry->beginInitialization(Storage.getConcurrency(),
                                              std::forward<ArgTys>(args)...);
-    return { entry, status };
+    return {entry, status};
   }
 
-  template <class KeyType>
-  EntryType *find(KeyType key) {
+  template <class KeyType> EntryType *find(KeyType key) {
     return Storage.find(key);
   }
 
   template <class KeyType, class... ArgTys>
-  std::pair<EntryType*, Status>
-  resumeInitialization(KeyType key, ArgTys &&...args) {
+  std::pair<EntryType *, Status> resumeInitialization(KeyType key,
+                                                      ArgTys &&... args) {
     EntryType *entry = Storage.resolveExistingEntry(key);
-    auto status =
-      entry->resumeInitialization(Storage.getConcurrency(),
-                                  std::forward<ArgTys>(args)...);
-    return { entry, status };
+    auto status = entry->resumeInitialization(Storage.getConcurrency(),
+                                              std::forward<ArgTys>(args)...);
+    return {entry, status};
   }
 
   template <class KeyType, class... ArgTys>
-  bool enqueue(KeyType key, ArgTys &&...args) {
+  bool enqueue(KeyType key, ArgTys &&... args) {
     EntryType *entry = Storage.resolveExistingEntry(key);
     return entry->enqueue(Storage.getConcurrency(),
                           std::forward<ArgTys>(args)...);
@@ -222,7 +216,7 @@ public:
 
   /// Given that an entry already exists, await it.
   template <class KeyType, class... ArgTys>
-  Status await(KeyType key, ArgTys &&...args) {
+  Status await(KeyType key, ArgTys &&... args) {
     EntryType *entry = Storage.resolveExistingEntry(key);
     return entry->await(Storage.getConcurrency(),
                         std::forward<ArgTys>(args)...);
@@ -230,9 +224,10 @@ public:
 
   /// If an entry already exists, await it; otherwise report failure.
   template <class KeyType, class... ArgTys>
-  Optional<Status> tryAwaitExisting(KeyType key, ArgTys &&...args) {
+  Optional<Status> tryAwaitExisting(KeyType key, ArgTys &&... args) {
     EntryType *entry = Storage.find(key);
-    if (!entry) return None;
+    if (!entry)
+      return None;
     return entry->await(Storage.getConcurrency(),
                         std::forward<ArgTys>(args)...);
   }
@@ -240,7 +235,7 @@ public:
   /// Given that an entry already exists, check whether it has an active
   /// dependency.
   template <class KeyType, class... ArgTys>
-  MetadataDependency checkDependency(KeyType key, ArgTys &&...args) {
+  MetadataDependency checkDependency(KeyType key, ArgTys &&... args) {
     EntryType *entry = Storage.resolveExistingEntry(key);
     return entry->checkDependency(Storage.getConcurrency(),
                                   std::forward<ArgTys>(args)...);
@@ -255,8 +250,7 @@ public:
 ///
 ///   /// Allocate the cached entry.  This is not allowed to fail.
 ///   ValueType allocate(ArgTys...);
-template <class Impl, class ValueType>
-class SimpleLockingCacheEntryBase {
+template <class Impl, class ValueType> class SimpleLockingCacheEntryBase {
   static_assert(std::is_pointer<ValueType>::value,
                 "value type must be a pointer type");
 
@@ -278,7 +272,7 @@ public:
   using Status = ValueType;
 
   template <class... ArgTys>
-  Status await(ConcurrencyControl &concurrency, ArgTys &&...args) {
+  Status await(ConcurrencyControl &concurrency, ArgTys &&... args) {
     // Load the value.  If this is not a special value, we're done.
     auto value = Value.load(std::memory_order_acquire);
     if (!isSpecialValue(value)) {
@@ -325,7 +319,7 @@ public:
 
   template <class... ArgTys>
   Optional<Status> beginAllocation(ConcurrencyControl &concurrency,
-                                   ArgTys &&...args) {
+                                   ArgTys &&... args) {
     // Delegate to the implementation class.
     ValueType origValue = asImpl().allocate(std::forward<ArgTys>(args)...);
 
@@ -338,7 +332,7 @@ public:
 
     // If there were any waiters, acquire the lock and notify the queue.
     if (oldValue != Empty_NoWaiters) {
-      concurrency.Lock.withLockThenNotifyAll(concurrency.Queue, []{});
+      concurrency.Lock.withLockThenNotifyAll(concurrency.Queue, [] {});
     }
 
     return origValue;
@@ -346,14 +340,14 @@ public:
 
   template <class... ArgTys>
   Status beginInitialization(ConcurrencyControl &concurrency,
-                             ArgTys &&...args) {
+                             ArgTys &&... args) {
     swift_runtime_unreachable("beginAllocation always short-circuits");
   }
 };
 
 /// A key value as provided to the concurrent map.
 class MetadataCacheKey {
-  const void * const *Data;
+  const void *const *Data;
   uint16_t NumKeyParameters;
   uint16_t NumWitnessTables;
   uint32_t Hash;
@@ -387,8 +381,7 @@ class MetadataCacheKey {
   }
 
   /// Compare the content from two keys.
-  static int compareContent(const void * const *adata,
-                            const void * const *bdata,
+  static int compareContent(const void *const *adata, const void *const *bdata,
                             unsigned numKeyParameters,
                             unsigned numWitnessTables) {
     // Compare generic arguments for key parameters.
@@ -399,9 +392,8 @@ class MetadataCacheKey {
 
     // Compare witness tables.
     for (unsigned i = 0; i != numWitnessTables; ++i) {
-      if (auto result =
-              compareWitnessTables((const WitnessTable *)*adata++,
-                                   (const WitnessTable *)*bdata++))
+      if (auto result = compareWitnessTables((const WitnessTable *)*adata++,
+                                             (const WitnessTable *)*bdata++))
         return result;
     }
 
@@ -409,26 +401,26 @@ class MetadataCacheKey {
   }
 
 public:
-  MetadataCacheKey(uint16_t numKeyParams,
-                   uint16_t numWitnessTables,
-                   const void * const *data)
+  MetadataCacheKey(uint16_t numKeyParams, uint16_t numWitnessTables,
+                   const void *const *data)
       : Data(data), NumKeyParameters(numKeyParams),
-        NumWitnessTables(numWitnessTables), Hash(computeHash()) { }
+        NumWitnessTables(numWitnessTables), Hash(computeHash()) {}
 
-  MetadataCacheKey(uint16_t numKeyParams,
-                   uint16_t numWitnessTables,
-                   const void * const *data,
-                   uint32_t hash)
-    : Data(data), NumKeyParameters(numKeyParams),
-      NumWitnessTables(numWitnessTables), Hash(hash) {}
+  MetadataCacheKey(uint16_t numKeyParams, uint16_t numWitnessTables,
+                   const void *const *data, uint32_t hash)
+      : Data(data), NumKeyParameters(numKeyParams),
+        NumWitnessTables(numWitnessTables), Hash(hash) {}
 
   bool operator==(MetadataCacheKey rhs) const {
     // Compare the hashes.
-    if (hash() != rhs.hash()) return false;
+    if (hash() != rhs.hash())
+      return false;
 
     // Compare the sizes.
-    if (NumKeyParameters != rhs.NumKeyParameters) return false;
-    if (NumWitnessTables != rhs.NumWitnessTables) return false;
+    if (NumKeyParameters != rhs.NumKeyParameters)
+      return false;
+    if (NumWitnessTables != rhs.NumWitnessTables)
+      return false;
 
     // Compare the content.
     return compareContent(begin(), rhs.begin(), NumKeyParameters,
@@ -461,12 +453,10 @@ public:
   uint16_t numKeyParameters() const { return NumKeyParameters; }
   uint16_t numWitnessTables() const { return NumWitnessTables; }
 
-  uint32_t hash() const {
-    return Hash;
-  }
+  uint32_t hash() const { return Hash; }
 
-  const void * const *begin() const { return Data; }
-  const void * const *end() const { return Data + size(); }
+  const void *const *begin() const { return Data; }
+  const void *const *end() const { return Data + size(); }
   unsigned size() const { return NumKeyParameters + NumWitnessTables; }
 
 private:
@@ -474,8 +464,8 @@ private:
     size_t H = 0x56ba80d1 * NumKeyParameters;
     for (unsigned index = 0; index != NumKeyParameters; ++index) {
       H = (H >> 10) | (H << ((sizeof(size_t) * 8) - 10));
-      H ^= (reinterpret_cast<size_t>(Data[index])
-            ^ (reinterpret_cast<size_t>(Data[index]) >> 19));
+      H ^= (reinterpret_cast<size_t>(Data[index]) ^
+            (reinterpret_cast<size_t>(Data[index]) >> 19));
     }
 
     H *= 0x27d4eb2d;
@@ -498,19 +488,17 @@ template <class Impl, class... Objects>
 struct ConcurrentMapTrailingObjectsEntry
     : swift::ABI::TrailingObjects<Impl, Objects...> {
 protected:
-  using TrailingObjects =
-      swift::ABI::TrailingObjects<Impl, Objects...>;
+  using TrailingObjects = swift::ABI::TrailingObjects<Impl, Objects...>;
 
   Impl &asImpl() { return static_cast<Impl &>(*this); }
   const Impl &asImpl() const { return static_cast<const Impl &>(*this); }
 
-  template<typename T>
+  template <typename T>
   using OverloadToken = typename TrailingObjects::template OverloadToken<T>;
 
 public:
   template <class KeyType, class... Args>
-  static size_t getExtraAllocationSize(const KeyType &key,
-                                       Args &&...args) {
+  static size_t getExtraAllocationSize(const KeyType &key, Args &&... args) {
     return TrailingObjects::template additionalSizeToAlloc<Objects...>(
         Impl::numTrailingObjects(OverloadToken<Objects>(), key, args...)...);
   }
@@ -573,17 +561,16 @@ public:
 
 private:
   enum : RawType {
-    State_mask =      0x7,
+    State_mask = 0x7,
     HasWaiters_mask = 0x8,
   };
 
   RawType Data;
 
 public:
-  explicit constexpr PrivateMetadataTrackingInfo(RawType data)
-    : Data(data) {}
+  explicit constexpr PrivateMetadataTrackingInfo(RawType data) : Data(data) {}
   explicit constexpr PrivateMetadataTrackingInfo(PrivateMetadataState state)
-    : Data(RawType(state)) {}
+      : Data(RawType(state)) {}
 
   static constexpr PrivateMetadataTrackingInfo initial() {
     return PrivateMetadataTrackingInfo(PrivateMetadataState::Allocating);
@@ -664,7 +651,7 @@ struct PrivateMetadataCompletionContext {
 
 struct MetadataCompletionQueueEntry {
   /// The owning metadata, i.e. the metadata whose completion is blocked.
-  Metadata * const Value;
+  Metadata *const Value;
 
   /// The completion queue for the blocked metadata.
   /// Only accessed under the lock for the owning metadata.
@@ -686,7 +673,7 @@ struct MetadataCompletionQueueEntry {
 
   MetadataCompletionQueueEntry(Metadata *value,
                                const PrivateMetadataCompletionContext &context)
-    : Value(value), CompletionContext(context) {}
+      : Value(value), CompletionContext(context) {}
 };
 
 /// Add the given queue entry to the queue for the given metadata.
@@ -736,8 +723,9 @@ void checkMetadataDependencyCycle(const Metadata *start,
 ///                                     PrivateMetadataCompletionContext *ctxt);
 template <class Impl, class... Objects>
 class MetadataCacheEntryBase
-       : public ConcurrentMapTrailingObjectsEntry<Impl, Objects...> {
+    : public ConcurrentMapTrailingObjectsEntry<Impl, Objects...> {
   using super = ConcurrentMapTrailingObjectsEntry<Impl, Objects...>;
+
 public:
   using ValueType = Metadata *;
   using Status = MetadataResponse;
@@ -785,7 +773,7 @@ private:
     /// up to be enqueued at least once.  (It's possible that the actual
     /// enqueuing never actually succeeded.)  The metadata's completion
     /// queue can be found at LockedStorage.QueueEntry->CompletionQueue.
-    /// 
+    ///
     /// The cache entry owns its queue entry, but it must not destroy it
     /// while it is blocked on another queue.
     QueueEntry,
@@ -829,16 +817,16 @@ public:
   /// metadata, await the metadata being in the right state.
   template <class... Args>
   Status await(ConcurrencyControl &concurrency, MetadataRequest request,
-               Args &&...extraArgs) {
-    auto trackingInfo =
-      PrivateMetadataTrackingInfo(TrackingInfo.load(std::memory_order_acquire));
+               Args &&... extraArgs) {
+    auto trackingInfo = PrivateMetadataTrackingInfo(
+        TrackingInfo.load(std::memory_order_acquire));
 
     if (trackingInfo.shouldWait(request)) {
       awaitSatisfyingState(concurrency, request, trackingInfo);
     }
 
     assert(trackingInfo.hasAllocatedMetadata());
-    return { asImpl().getValue(), trackingInfo.getAccomplishedRequestState() };
+    return {asImpl().getValue(), trackingInfo.getAccomplishedRequestState()};
   }
 
   /// The expected return type of allocate.
@@ -849,9 +837,8 @@ public:
 
   /// Perform the allocation operation.
   template <class... Args>
-  Optional<Status>
-  beginAllocation(ConcurrencyControl &concurrency, MetadataRequest request,
-                  Args &&...args) {
+  Optional<Status> beginAllocation(ConcurrencyControl &concurrency,
+                                   MetadataRequest request, Args &&... args) {
     // Returning a non-None value here will preempt initialization, so we
     // should only do it if we're reached PrivateMetadataState::Complete.
 
@@ -859,8 +846,7 @@ public:
     if (Impl::MayFlagAllocatedDuringConstruction) {
       // This can be a relaxed load because beginAllocation is called on the
       // same thread that called the constructor.
-      auto trackingInfo =
-        PrivateMetadataTrackingInfo(
+      auto trackingInfo = PrivateMetadataTrackingInfo(
           TrackingInfo.load(std::memory_order_relaxed));
 
       // If we've already allocated metadata, we can skip the rest of
@@ -870,7 +856,7 @@ public:
         if (trackingInfo.isComplete()) {
           return Status{asImpl().getValue(), MetadataState::Complete};
 
-        // Otherwise go directly to the initialization phase.
+          // Otherwise go directly to the initialization phase.
         } else {
           return None;
         }
@@ -879,7 +865,7 @@ public:
 
     // Allocate the metadata.
     AllocationResult allocationResult =
-      asImpl().allocate(std::forward<Args>(args)...);
+        asImpl().allocate(std::forward<Args>(args)...);
 
     // Publish the value.
     asImpl().setValue(const_cast<ValueType>(allocationResult.Value));
@@ -914,7 +900,7 @@ public:
   /// Begin initialization immediately after allocation.
   template <class... Args>
   Status beginInitialization(ConcurrencyControl &concurrency,
-                             MetadataRequest request, Args &&...args) {
+                             MetadataRequest request, Args &&... args) {
     // Note that we ignore the extra arguments; those are just for the
     // constructor and allocation.
     return doInitialization(concurrency, nullptr, request);
@@ -947,8 +933,8 @@ private:
     // that were processing the initialization, so a relaxed load is fine
     // here.  (This ordering is achieved by the locking which occurs as part
     // of queuing and dequeuing metadata.)
-    auto curTrackingInfo =
-      PrivateMetadataTrackingInfo(TrackingInfo.load(std::memory_order_relaxed));
+    auto curTrackingInfo = PrivateMetadataTrackingInfo(
+        TrackingInfo.load(std::memory_order_relaxed));
     assert(curTrackingInfo.hasAllocatedMetadata());
     assert(!curTrackingInfo.isComplete());
 
@@ -972,7 +958,7 @@ private:
     // add ourselves to its queue.
     while (true) {
       TryInitializeResult tryInitializeResult =
-        asImpl().tryInitialize(value, curTrackingInfo.getState(), context);
+          asImpl().tryInitialize(value, curTrackingInfo.getState(), context);
       auto newState = tryInitializeResult.NewState;
 
       assert(curTrackingInfo.getState() <= newState &&
@@ -1058,7 +1044,7 @@ private:
     verifyMangledNameRoundtrip(value);
 #endif
 
-    return { value, curTrackingInfo.getAccomplishedRequestState() };
+    return {value, curTrackingInfo.getAccomplishedRequestState()};
   }
 
   /// Prepare to enqueue this metadata on another metadata's completion
@@ -1091,8 +1077,9 @@ private:
 
   /// Claim all the satisfied completion queue entries, given that
   /// we're holding the lock.
-  void claimSatisfiedQueueEntriesWithLock(PrivateMetadataTrackingInfo newInfo,
-                                  MetadataCompletionQueueEntry *&claimedQueue) {
+  void claimSatisfiedQueueEntriesWithLock(
+      PrivateMetadataTrackingInfo newInfo,
+      MetadataCompletionQueueEntry *&claimedQueue) {
     // Collect anything in the metadata's queue whose target state has been
     // reached to the queue in result.  Note that we repurpose the Next field
     // in the collected entries.
@@ -1161,8 +1148,8 @@ private:
     assert(newInfo.hasAllocatedMetadata());
     assert(!newInfo.hasWaiters());
 
-    auto oldInfo = PrivateMetadataTrackingInfo(
-      TrackingInfo.exchange(newInfo.getRawValue(), std::memory_order_release));
+    auto oldInfo = PrivateMetadataTrackingInfo(TrackingInfo.exchange(
+        newInfo.getRawValue(), std::memory_order_release));
     assert(!oldInfo.isComplete());
 
     // If we have existing waiters, wake them now, since we no longer
@@ -1184,7 +1171,7 @@ private:
       // need to wait, we're done.  Otherwise, flag the existence of a
       // waiter; if that fails, start over with the freshly-loaded state.
       trackingInfo = PrivateMetadataTrackingInfo(
-                                  TrackingInfo.load(std::memory_order_acquire));
+          TrackingInfo.load(std::memory_order_acquire));
       while (true) {
         if (!trackingInfo.shouldWait(request))
           return true;
@@ -1194,10 +1181,10 @@ private:
 
         // Try to swap in the has-waiters bit.  If this succeeds, we can
         // ahead and wait.
-        if (TrackingInfo.compare_exchange_weak(trackingInfo.getRawValueRef(),
-                                        trackingInfo.addWaiters().getRawValue(),
-                                        std::memory_order_relaxed,
-                                        std::memory_order_acquire))
+        if (TrackingInfo.compare_exchange_weak(
+                trackingInfo.getRawValueRef(),
+                trackingInfo.addWaiters().getRawValue(),
+                std::memory_order_relaxed, std::memory_order_acquire))
           break;
       }
 
@@ -1207,7 +1194,7 @@ private:
       if (isBeingAllocatedByCurrentThread()) {
         fprintf(stderr,
                 "%s(%p): cyclic metadata dependency detected, aborting\n",
-                Impl::getName(), static_cast<const void*>(this));
+                Impl::getName(), static_cast<const void *>(this));
         abort();
       }
 
@@ -1236,7 +1223,7 @@ public:
     MetadataDependency otherDependency;
     bool success = concurrency.Lock.withLock([&] {
       auto curInfo = PrivateMetadataTrackingInfo(
-                                  TrackingInfo.load(std::memory_order_acquire));
+          TrackingInfo.load(std::memory_order_acquire));
       if (curInfo.satisfies(dependency.Requirement))
         return false;
 
@@ -1291,7 +1278,7 @@ public:
     return concurrency.Lock.withLock([&] {
       // Load the current state.
       auto curInfo = PrivateMetadataTrackingInfo(
-                                  TrackingInfo.load(std::memory_order_acquire));
+          TrackingInfo.load(std::memory_order_acquire));
 
       // If the requirement is satisfied, there no further dependency for now.
       if (curInfo.satisfies(requirement))
@@ -1316,8 +1303,8 @@ public:
 /// An convenient subclass of MetadataCacheEntryBase which provides
 /// metadata lookup using a variadic key.
 template <class Impl, class... Objects>
-class VariadicMetadataCacheEntryBase :
-         public MetadataCacheEntryBase<Impl, const void *, Objects...> {
+class VariadicMetadataCacheEntryBase
+    : public MetadataCacheEntryBase<Impl, const void *, Objects...> {
   using super = MetadataCacheEntryBase<Impl, const void *, Objects...>;
 
 protected:
@@ -1331,7 +1318,7 @@ protected:
   using TrailingObjects = typename super::TrailingObjects;
   friend TrailingObjects;
 
-  template<typename T>
+  template <typename T>
   using OverloadToken = typename TrailingObjects::template OverloadToken<T>;
 
   size_t numTrailingObjects(OverloadToken<const void *>) const {
@@ -1341,7 +1328,7 @@ protected:
   template <class... Args>
   static size_t numTrailingObjects(OverloadToken<const void *>,
                                    const MetadataCacheKey &key,
-                                   Args &&...extraArgs) {
+                                   Args &&... extraArgs) {
     return key.size();
   }
 
@@ -1357,31 +1344,24 @@ private:
   ValueType Value;
 
   friend super;
-  ValueType getValue() {
-    return Value;
-  }
-  void setValue(ValueType value) {
-    Value = value;
-  }
+  ValueType getValue() { return Value; }
+  void setValue(ValueType value) { Value = value; }
 
 public:
   VariadicMetadataCacheEntryBase(const MetadataCacheKey &key)
       : NumKeyParameters(key.numKeyParameters()),
-        NumWitnessTables(key.numWitnessTables()),
-        Hash(key.hash()) {
-    memcpy(this->template getTrailingObjects<const void *>(),
-           key.begin(), key.size() * sizeof(const void *));
+        NumWitnessTables(key.numWitnessTables()), Hash(key.hash()) {
+    memcpy(this->template getTrailingObjects<const void *>(), key.begin(),
+           key.size() * sizeof(const void *));
   }
 
   MetadataCacheKey getKey() const {
     return MetadataCacheKey(NumKeyParameters, NumWitnessTables,
-                            this->template getTrailingObjects<const void*>(),
+                            this->template getTrailingObjects<const void *>(),
                             Hash);
   }
 
-  intptr_t getKeyIntValueForDump() const {
-    return Hash;
-  }
+  intptr_t getKeyIntValueForDump() const { return Hash; }
 
   int compareWithKey(const MetadataCacheKey &key) const {
     return key.compare(getKey());
@@ -1389,10 +1369,10 @@ public:
 };
 
 template <class EntryType, bool ProvideDestructor = true>
-class MetadataCache :
-    public LockingConcurrentMap<EntryType,
-             LockingConcurrentMapStorage<EntryType, ProvideDestructor>> {
-};
+class MetadataCache
+    : public LockingConcurrentMap<
+          EntryType,
+          LockingConcurrentMapStorage<EntryType, ProvideDestructor>> {};
 
 } // namespace swift
 

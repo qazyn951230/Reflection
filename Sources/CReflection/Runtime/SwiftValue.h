@@ -22,8 +22,8 @@
 #define SWIFT_RUNTIME_SWIFTVALUE_H
 
 #if SWIFT_OBJC_INTEROP
-#include <objc/runtime.h>
 #include "swift/Runtime/Metadata.h"
+#include <objc/runtime.h>
 
 // __SwiftValue is an Objective-C class, but we shouldn't interface with it
 // directly as such. Keep the type opaque.
@@ -35,10 +35,11 @@ typedef struct __SwiftValue __SwiftValue;
 
 namespace swift {
 
-/// Bridge a Swift value to an Objective-C object by boxing it as a __SwiftValue.
+/// Bridge a Swift value to an Objective-C object by boxing it as a
+/// __SwiftValue.
 __SwiftValue *bridgeAnythingToSwiftValueObject(OpaqueValue *src,
-                                              const Metadata *srcType,
-                                              bool consume);
+                                               const Metadata *srcType,
+                                               bool consume);
 
 /// Get the type metadata for a value in a Swift box.
 const Metadata *getSwiftValueTypeMetadata(__SwiftValue *v);
@@ -48,8 +49,8 @@ const Metadata *getSwiftValueTypeMetadata(__SwiftValue *v);
 std::pair<const Metadata *, const OpaqueValue *>
 getValueFromSwiftValue(__SwiftValue *v);
 
-/// Return the object reference as a __SwiftValue* if it is a __SwiftValue instance,
-/// or nil if it is not.
+/// Return the object reference as a __SwiftValue* if it is a __SwiftValue
+/// instance, or nil if it is not.
 __SwiftValue *getAsSwiftValue(id object);
 
 /// Find conformances for SwiftValue to the given existential type.

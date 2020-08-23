@@ -2,8 +2,9 @@ add_subdirectory(llvm)
 add_subdirectory(runtime)
 
 add_library(Runtime SHARED
-    include/Runtime.h
-    Runtime.cpp)
+    include/Config.h
+    include/CReflection.h
+    CReflection.cpp)
 
 set_target_properties(Runtime PROPERTIES
     LANGUAGE CXX
@@ -26,4 +27,4 @@ target_link_options(Runtime PRIVATE -L/usr/lib/swift)
 
 target_link_libraries(Runtime PRIVATE
     swiftCore swiftDemangle objc
-    swift_runtime)
+    swift_runtime llvm)

@@ -36,10 +36,10 @@
 #include <stdarg.h>
 
 #include "ImageInspection.h"
+#include "swift/Basic/LLVM.h"
+#include "swift/Demangling/Demangle.h"
 #include "swift/Runtime/Debug.h"
 #include "swift/Runtime/Mutex.h"
-#include "swift/Demangling/Demangle.h"
-#include "swift/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
 #if defined(_MSC_VER)
@@ -65,9 +65,7 @@
 #include <inttypes.h>
 
 namespace FatalErrorFlags {
-enum: uint32_t {
-  ReportBacktrace = 1 << 0
-};
+enum : uint32_t { ReportBacktrace = 1 << 0 };
 } // end namespace FatalErrorFlags
 
 using namespace swift;
@@ -200,7 +198,8 @@ struct UnwindState {
   void **end;
 };
 
-static _Unwind_Reason_Code SwiftUnwindFrame(struct _Unwind_Context *context, void *arg) {
+static _Unwind_Reason_Code SwiftUnwindFrame(struct _Unwind_Context *context,
+                                            void *arg) {
   struct UnwindState *state = static_cast<struct UnwindState *>(arg);
   if (state->current == state->end) {
     return _URC_END_OF_STACK;
@@ -229,7 +228,8 @@ void swift::printCurrentBacktrace(unsigned framesToSkip) {
   constexpr unsigned maxSupportedStackDepth = 128;
   void *addrs[maxSupportedStackDepth];
 #if defined(_WIN32)
-  int symbolCount = CaptureStackBackTrace(0, maxSupportedStackDepth, addrs, NULL);
+  int symbolCount =
+      CaptureStackBackTrace(0, maxSupportedStackDepth, addrs, NULL);
 #elif defined(__ELF__)
   struct UnwindState state = {&addrs[0], &addrs[maxSupportedStackDepth]};
   _Unwind_Backtrace(SwiftUnwindFrame, &state);
@@ -255,15 +255,13 @@ void swift::printCurrentBacktrace(unsigned framesToSkip) {
 // here.
 extern "C" {
 LLVM_LIBRARY_VISIBILITY
-struct crashreporter_annotations_t gCRAnnotations
-__attribute__((__section__("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION))) = {
+struct crashreporter_annotations_t gCRAnnotations __attribute__((
+    __section__("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION))) = {
     CRASHREPORTER_ANNOTATIONS_VERSION, 0, 0, 0, 0, 0, 0, 0};
 }
 
 // Report a message to any forthcoming crash log.
-static void
-reportOnCrash(uint32_t flags, const char *message)
-{
+static void reportOnCrash(uint32_t flags, const char *message) {
   // We must use an "unsafe" mutex in this pathway since the normal "safe"
   // mutex calls fatalError when an error is detected and fatalError ends up
   // calling us. In other words we could get infinite recursion if the
@@ -276,7 +274,8 @@ reportOnCrash(uint32_t flags, const char *message)
   char *newMessage;
   if (oldMessage) {
     asprintf(&newMessage, "%s%s", oldMessage, message);
-    if (malloc_size(oldMessage)) free(oldMessage);
+    if (malloc_size(oldMessage))
+      free(oldMessage);
   } else {
     newMessage = strdup(message);
   }
@@ -288,18 +287,14 @@ reportOnCrash(uint32_t flags, const char *message)
 
 #else
 
-static void
-reportOnCrash(uint32_t flags, const char *message)
-{
+static void reportOnCrash(uint32_t flags, const char *message) {
   // empty
 }
 
 #endif
 
 // Report a message to system console and stderr.
-static void
-reportNow(uint32_t flags, const char *message)
-{
+static void reportNow(uint32_t flags, const char *message) {
 #if defined(_WIN32)
 #define STDERR_FILENO 2
   _write(STDERR_FILENO, message, strlen(message));
@@ -319,17 +314,17 @@ reportNow(uint32_t flags, const char *message)
 #endif
 }
 
-LLVM_ATTRIBUTE_NOINLINE SWIFT_RUNTIME_EXPORT
-void _swift_runtime_on_report(uintptr_t flags, const char *message,
-                              RuntimeErrorDetails *details) {
+LLVM_ATTRIBUTE_NOINLINE SWIFT_RUNTIME_EXPORT void
+_swift_runtime_on_report(uintptr_t flags, const char *message,
+                         RuntimeErrorDetails *details) {
   // Do nothing. This function is meant to be used by the debugger.
 
   // The following is necessary to avoid calls from being optimized out.
-  asm volatile("" // Do nothing.
-               : // Output list, empty.
-               : "r" (flags), "r" (message), "r" (details) // Input list.
-               : // Clobber list, empty.
-               );
+  asm volatile(""                                       // Do nothing.
+               :                                        // Output list, empty.
+               : "r"(flags), "r"(message), "r"(details) // Input list.
+               :                                        // Clobber list, empty.
+  );
 }
 
 void swift::_swift_reportToDebugger(uintptr_t flags, const char *message,
@@ -345,8 +340,7 @@ bool swift::_swift_shouldReportFatalErrorsToDebugger() {
 
 /// Report a fatal error to system console, stderr, and crash logs.
 /// Does not crash by itself.
-void swift::swift_reportError(uint32_t flags,
-                              const char *message) {
+void swift::swift_reportError(uint32_t flags, const char *message) {
 #if defined(__APPLE__) && NDEBUG
   flags &= ~FatalErrorFlags::ReportBacktrace;
 #endif
@@ -376,9 +370,7 @@ static int swift_vasprintf(char **strp, const char *fmt, va_list ap) {
 
 // Report a fatal error to system console, stderr, and crash logs, then abort.
 LLVM_ATTRIBUTE_NORETURN
-void
-swift::fatalError(uint32_t flags, const char *format, ...)
-{
+void swift::fatalError(uint32_t flags, const char *format, ...) {
   va_list args;
   va_start(args, format);
 
@@ -393,9 +385,7 @@ swift::fatalError(uint32_t flags, const char *format, ...)
 }
 
 // Report a warning to system console and stderr.
-void
-swift::warningv(uint32_t flags, const char *format, va_list args)
-{
+void swift::warningv(uint32_t flags, const char *format, va_list args) {
   char *log;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuninitialized"
@@ -408,9 +398,7 @@ swift::warningv(uint32_t flags, const char *format, va_list args)
 }
 
 // Report a warning to system console and stderr.
-void
-swift::warning(uint32_t flags, const char *format, ...)
-{
+void swift::warning(uint32_t flags, const char *format, ...) {
   va_list args;
   va_start(args, format);
 
@@ -420,12 +408,9 @@ swift::warning(uint32_t flags, const char *format, ...)
 // Crash when a deleted method is called by accident.
 SWIFT_RUNTIME_EXPORT
 LLVM_ATTRIBUTE_NORETURN
-void
-swift_deletedMethodError() {
-  swift::fatalError(/* flags = */ 0,
-                    "Fatal error: Call of deleted method\n");
+void swift_deletedMethodError() {
+  swift::fatalError(/* flags = */ 0, "Fatal error: Call of deleted method\n");
 }
-
 
 // Crash due to a retain count overflow.
 // FIXME: can't pass the object's address from InlineRefCounts without hacks
@@ -437,15 +422,17 @@ void swift::swift_abortRetainOverflow() {
 // Crash due to an unowned retain count overflow.
 // FIXME: can't pass the object's address from InlineRefCounts without hacks
 void swift::swift_abortUnownedRetainOverflow() {
-  swift::fatalError(FatalErrorFlags::ReportBacktrace,
-                    "Fatal error: Object's unowned reference was retained too many times");
+  swift::fatalError(
+      FatalErrorFlags::ReportBacktrace,
+      "Fatal error: Object's unowned reference was retained too many times");
 }
 
 // Crash due to a weak retain count overflow.
 // FIXME: can't pass the object's address from InlineRefCounts without hacks
 void swift::swift_abortWeakRetainOverflow() {
-  swift::fatalError(FatalErrorFlags::ReportBacktrace,
-                    "Fatal error: Object's weak reference was retained too many times");
+  swift::fatalError(
+      FatalErrorFlags::ReportBacktrace,
+      "Fatal error: Object's weak reference was retained too many times");
 }
 
 // Crash due to retain of a dead unowned reference.
@@ -454,7 +441,8 @@ void swift::swift_abortRetainUnowned(const void *object) {
   if (object) {
     swift::fatalError(FatalErrorFlags::ReportBacktrace,
                       "Fatal error: Attempted to read an unowned reference but "
-                      "object %p was already deallocated", object);
+                      "object %p was already deallocated",
+                      object);
   } else {
     swift::fatalError(FatalErrorFlags::ReportBacktrace,
                       "Fatal error: Attempted to read an unowned reference but "

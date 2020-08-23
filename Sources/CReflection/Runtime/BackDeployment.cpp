@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "swift/Runtime/BackDeployment.h"
-#include "swift/Runtime/Config.h"
 #include "../SwiftShims/FoundationShims.h"
+#include "swift/Runtime/Config.h"
 #include <stdlib.h>
 
 #if defined(__APPLE__) && defined(__MACH__)
@@ -25,33 +25,37 @@ static unsigned long long computeIsSwiftMask() {
 }
 
 SWIFT_ALLOWED_RUNTIME_GLOBAL_CTOR_BEGIN
-extern "C" unsigned long long
-_swift_classIsSwiftMask = computeIsSwiftMask();
+extern "C" unsigned long long _swift_classIsSwiftMask = computeIsSwiftMask();
 SWIFT_ALLOWED_RUNTIME_GLOBAL_CTOR_END
 #endif // SWIFT_CLASS_IS_SWIFT_MASK_GLOBAL_VARIABLE
 
 static swift::_SwiftNSOperatingSystemVersion swiftInOSVersion = {
 #if __MAC_OS_X_VERSION_MIN_REQUIRED
-  10, 14, 4
+    10, 14, 4
 // WatchOS also pretends to be iOS, so check it first.
 #elif __WATCH_OS_VERSION_MIN_REQUIRED
-   5,  2, 0
+    5, 2, 0
 #elif __IPHONE_OS_VERSION_MIN_REQUIRED || __TV_OS_VERSION_MIN_REQUIRED
-  12,  2, 0
+    12, 2, 0
 #else
-  9999, 0, 0
+    9999, 0, 0
 #endif
 };
 
 static bool versionLessThan(swift::_SwiftNSOperatingSystemVersion lhs,
                             swift::_SwiftNSOperatingSystemVersion rhs) {
-  if (lhs.majorVersion < rhs.majorVersion) return true;
-  if (lhs.majorVersion > rhs.majorVersion) return false;
+  if (lhs.majorVersion < rhs.majorVersion)
+    return true;
+  if (lhs.majorVersion > rhs.majorVersion)
+    return false;
 
-  if (lhs.minorVersion < rhs.minorVersion) return true;
-  if (lhs.minorVersion > rhs.minorVersion) return false;
+  if (lhs.minorVersion < rhs.minorVersion)
+    return true;
+  if (lhs.minorVersion > rhs.minorVersion)
+    return false;
 
-  if (lhs.patchVersion < rhs.patchVersion) return true;
+  if (lhs.patchVersion < rhs.patchVersion)
+    return true;
 
   return false;
 }

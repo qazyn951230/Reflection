@@ -1,4 +1,4 @@
-add_library(llvm SHARED
+add_library(llvm
     Fake.cpp
     Hashing.cpp
     SmallVector.cpp)

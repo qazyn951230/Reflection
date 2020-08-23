@@ -19,14 +19,13 @@
 #define SWIFT_RUNTIME_SWIFTOBJECT_H
 
 #include "swift/Runtime/Config.h"
+#include "swift/Runtime/HeapObject.h"
 #include <cstdint>
 #include <utility>
-#include "swift/Runtime/HeapObject.h"
 #if SWIFT_OBJC_INTEROP
 #include "llvm/Support/Compiler.h"
 #include <objc/NSObject.h>
 #endif
-
 
 #if SWIFT_OBJC_INTEROP
 #if __OBJC__
@@ -39,7 +38,7 @@
 __attribute__((__objc_root_class__))
 #endif
 SWIFT_RUNTIME_EXPORT @interface SwiftObject<NSObject> {
- @private
+@private
   Class isa;
   SWIFT_HEAPOBJECT_NON_OBJC_MEMBERS;
 }
@@ -54,7 +53,9 @@ SWIFT_RUNTIME_EXPORT @interface SwiftObject<NSObject> {
 
 - (id)performSelector:(SEL)aSelector;
 - (id)performSelector:(SEL)aSelector withObject:(id)object;
-- (id)performSelector:(SEL)aSelector withObject:(id)object1 withObject:(id)object2;
+- (id)performSelector:(SEL)aSelector
+           withObject:(id)object1
+           withObject:(id)object2;
 
 - (BOOL)isProxy;
 

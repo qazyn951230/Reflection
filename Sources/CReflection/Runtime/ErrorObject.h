@@ -24,16 +24,16 @@
 #ifndef __SWIFT_RUNTIME_ERROROBJECT_H__
 #define __SWIFT_RUNTIME_ERROROBJECT_H__
 
-#include "swift/Runtime/Metadata.h"
-#include "swift/Runtime/HeapObject.h"
 #include "SwiftHashableSupport.h"
+#include "swift/Runtime/HeapObject.h"
+#include "swift/Runtime/Metadata.h"
 
 #include "llvm/Support/Compiler.h"
 
 #include <atomic>
 #if SWIFT_OBJC_INTEROP
-# include <CoreFoundation/CoreFoundation.h>
-# include <objc/objc.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <objc/objc.h>
 #endif
 
 namespace swift {
@@ -92,23 +92,24 @@ struct SwiftError : SwiftErrorHeader {
   /// This member is only available for native Swift errors.
   /// This member is lazily-initialized.
   /// Instead of using it directly, call `getHashableConformance()`.
-  mutable std::atomic<const hashable_support::HashableWitnessTable *> hashableConformance;
+  mutable std::atomic<const hashable_support::HashableWitnessTable *>
+      hashableConformance;
 #endif
 
   /// Get a pointer to the value contained inside the indirectly-referenced
   /// box reference.
-  static const OpaqueValue *getIndirectValue(const SwiftError * const *ptr) {
+  static const OpaqueValue *getIndirectValue(const SwiftError *const *ptr) {
     // If the box is a bridged NSError, then the box's address is itself the
     // value.
     if ((*ptr)->isPureNSError())
       return reinterpret_cast<const OpaqueValue *>(ptr);
     return (*ptr)->getValue();
   }
-  static OpaqueValue *getIndirectValue(SwiftError * const *ptr) {
-    return const_cast<OpaqueValue *>(getIndirectValue(
-                                  const_cast<const SwiftError * const *>(ptr)));
+  static OpaqueValue *getIndirectValue(SwiftError *const *ptr) {
+    return const_cast<OpaqueValue *>(
+        getIndirectValue(const_cast<const SwiftError *const *>(ptr)));
   }
-  
+
   /// Get a pointer to the value, which is tail-allocated after
   /// the fixed header.
   const OpaqueValue *getValue() const {
@@ -116,7 +117,7 @@ struct SwiftError : SwiftErrorHeader {
     // value. We can't provide an address for that; getIndirectValue must be
     // used if we haven't established this as an NSError yet..
     assert(!isPureNSError());
-  
+
     auto baseAddr = reinterpret_cast<uintptr_t>(this + 1);
     // Round up to the value's alignment.
     unsigned alignMask = type->getValueWitnesses()->getAlignmentMask();
@@ -124,10 +125,10 @@ struct SwiftError : SwiftErrorHeader {
     return reinterpret_cast<const OpaqueValue *>(baseAddr);
   }
   OpaqueValue *getValue() {
-    return const_cast<OpaqueValue*>(
-             const_cast<const SwiftError *>(this)->getValue());
+    return const_cast<OpaqueValue *>(
+        const_cast<const SwiftError *>(this)->getValue());
   }
-  
+
 #if SWIFT_OBJC_INTEROP
   // True if the object is really an NSError or CFError instance.
   // The type and errorConformance fields don't exist in an NSError.
@@ -135,7 +136,7 @@ struct SwiftError : SwiftErrorHeader {
 #else
   bool isPureNSError() const { return false; }
 #endif
-  
+
 #if SWIFT_OBJC_INTEROP
   /// Get the type of the contained value.
   const Metadata *getType() const;
@@ -171,11 +172,11 @@ struct SwiftError : SwiftErrorHeader {
 /// copied (or taken if \c isTake is true) into the newly-allocated error box.
 /// If value is null, the box's contents will be left uninitialized, and
 /// \c isTake should be false.
-SWIFT_CC(swift) SWIFT_RUNTIME_STDLIB_API
-BoxPair swift_allocError(const Metadata *type,
-                         const WitnessTable *errorConformance,
-                         OpaqueValue *value, bool isTake);
-  
+SWIFT_CC(swift)
+SWIFT_RUNTIME_STDLIB_API BoxPair
+    swift_allocError(const Metadata *type, const WitnessTable *errorConformance,
+                     OpaqueValue *value, bool isTake);
+
 /// Deallocate an error object whose contained object has already been
 /// destroyed.
 SWIFT_RUNTIME_STDLIB_API
@@ -195,8 +196,7 @@ struct ErrorValueResult {
 /// that buffer if the error object is a toll-free-bridged NSError instead of
 /// a native Swift error, in which case the object itself is the "boxed" value.
 SWIFT_RUNTIME_STDLIB_API
-void swift_getErrorValue(const SwiftError *errorObject,
-                         void **scratch,
+void swift_getErrorValue(const SwiftError *errorObject, void **scratch,
                          ErrorValueResult *out);
 
 /// Retain and release SwiftError boxes.
@@ -206,33 +206,34 @@ SWIFT_RUNTIME_STDLIB_API
 void swift_errorRelease(SwiftError *object);
 
 /// Breakpoint hook for debuggers.
-SWIFT_CC(swift) SWIFT_RUNTIME_STDLIB_API
-void swift_willThrow(SWIFT_CONTEXT void *unused,
-                     SWIFT_ERROR_RESULT SwiftError **object);
+SWIFT_CC(swift)
+SWIFT_RUNTIME_STDLIB_API
+    void swift_willThrow(SWIFT_CONTEXT void *unused,
+                         SWIFT_ERROR_RESULT SwiftError **object);
 
 /// Halt in response to an error.
-SWIFT_CC(swift) SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN
-void swift_errorInMain(SwiftError *object);
-SWIFT_CC(swift) SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN
-void swift_unexpectedError(SwiftError *object,
-                           OpaqueValue *filenameStart,
-                           long filenameLength,
-                           bool isAscii,
-                           unsigned long line);
+SWIFT_CC(swift)
+SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN
+    void swift_errorInMain(SwiftError *object);
+SWIFT_CC(swift)
+SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN
+    void swift_unexpectedError(SwiftError *object, OpaqueValue *filenameStart,
+                               long filenameLength, bool isAscii,
+                               unsigned long line);
 
 #if SWIFT_OBJC_INTEROP
 
 /// Initialize an Error box to make it usable as an NSError instance.
 ///
 /// errorObject is assumed to be passed at +1 and consumed in this function.
-SWIFT_CC(swift) SWIFT_RUNTIME_STDLIB_SPI
-id _swift_stdlib_bridgeErrorToNSError(SwiftError *errorObject);
+SWIFT_CC(swift)
+SWIFT_RUNTIME_STDLIB_SPI id
+    _swift_stdlib_bridgeErrorToNSError(SwiftError *errorObject);
 
 /// Attempt to dynamically cast an NSError object to a Swift ErrorType
 /// implementation using the _ObjectiveCBridgeableErrorType protocol or by
 /// putting it directly into an Error existential.
-bool tryDynamicCastNSErrorObjectToValue(HeapObject *object,
-                                        OpaqueValue *dest,
+bool tryDynamicCastNSErrorObjectToValue(HeapObject *object, OpaqueValue *dest,
                                         const Metadata *destType,
                                         DynamicCastFlags flags);
 
@@ -241,8 +242,7 @@ bool tryDynamicCastNSErrorObjectToValue(HeapObject *object,
 /// putting it directly into an Error existential.
 ///
 /// srcType must be some kind of class metadata.
-bool tryDynamicCastNSErrorToValue(OpaqueValue *dest,
-                                  OpaqueValue *src,
+bool tryDynamicCastNSErrorToValue(OpaqueValue *dest, OpaqueValue *src,
                                   const Metadata *srcType,
                                   const Metadata *destType,
                                   DynamicCastFlags flags);
@@ -259,8 +259,7 @@ const WitnessTable *findErrorWitness(const Metadata *srcType);
 
 /// Dynamically cast a value whose conformance to the Error protocol is known
 /// into an NSError instance.
-id dynamicCastValueToNSError(OpaqueValue *src,
-                             const Metadata *srcType,
+id dynamicCastValueToNSError(OpaqueValue *src, const Metadata *srcType,
                              const WitnessTable *srcErrorWitness,
                              DynamicCastFlags flags);
 
@@ -277,12 +276,13 @@ const size_t _swift_lldb_sizeof_SwiftError;
 #if SWIFT_OBJC_INTEROP
 // internal func _getErrorEmbeddedNSErrorIndirect<T : Error>(
 //   _ x: UnsafePointer<T>) -> AnyObject?
-#define getErrorEmbeddedNSErrorIndirect \
+#define getErrorEmbeddedNSErrorIndirect                                        \
   MANGLE_SYM(s32_getErrorEmbeddedNSErrorIndirectyyXlSgSPyxGs0B0RzlF)
-SWIFT_CC(swift) SWIFT_RUNTIME_STDLIB_INTERNAL
-id getErrorEmbeddedNSErrorIndirect(const swift::OpaqueValue *error,
-                                   const swift::Metadata *T,
-                                   const swift::WitnessTable *Error);
+SWIFT_CC(swift)
+SWIFT_RUNTIME_STDLIB_INTERNAL id
+    getErrorEmbeddedNSErrorIndirect(const swift::OpaqueValue *error,
+                                    const swift::Metadata *T,
+                                    const swift::WitnessTable *Error);
 #endif
 
 #endif

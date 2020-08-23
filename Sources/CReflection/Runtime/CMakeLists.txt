@@ -1,4 +1,4 @@
-add_library(swift_runtime SHARED
+add_library(swift_runtime
     BackDeployment.cpp
     Casting.cpp
     CompatibilityOverride.cpp

@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Support back-deploying compatibility fixes for newer apps running on older runtimes.
+// Support back-deploying compatibility fixes for newer apps running on older
+// runtimes.
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,9 +38,9 @@ using namespace swift;
 /// version must be set to 0.
 struct OverrideSection {
   uintptr_t version;
-  
-#define OVERRIDE(name, ret, attrs, ccAttrs, namespace, typedArgs, namedArgs) \
-  Override_ ## name name;
+
+#define OVERRIDE(name, ret, attrs, ccAttrs, namespace, typedArgs, namedArgs)   \
+  Override_##name name;
 #include "CompatibilityOverride.def"
 };
 
@@ -49,22 +50,25 @@ static_assert(std::is_pod<OverrideSection>::value,
 static OverrideSection *getOverrideSectionPtr() {
   static OverrideSection *OverrideSectionPtr;
   static swift_once_t Predicate;
-  swift_once(&Predicate, [](void *) {
-    size_t Size;
-    OverrideSectionPtr = static_cast<OverrideSection *>(
-                             lookupSection("__DATA", "__swift52_hooks", &Size));
-    if (Size < sizeof(OverrideSection))
-      OverrideSectionPtr = nullptr;
-  }, nullptr);
-  
+  swift_once(
+      &Predicate,
+      [](void *) {
+        size_t Size;
+        OverrideSectionPtr = static_cast<OverrideSection *>(
+            lookupSection("__DATA", "__swift52_hooks", &Size));
+        if (Size < sizeof(OverrideSection))
+          OverrideSectionPtr = nullptr;
+      },
+      nullptr);
+
   return OverrideSectionPtr;
 }
 
-#define OVERRIDE(name, ret, attrs, ccAttrs, namespace, typedArgs, namedArgs) \
-  Override_ ## name swift::getOverride_ ## name() {                 \
-    auto *Section = getOverrideSectionPtr();                        \
-    if (Section == nullptr)                                         \
-      return nullptr;                                               \
-    return Section->name;                                           \
+#define OVERRIDE(name, ret, attrs, ccAttrs, namespace, typedArgs, namedArgs)   \
+  Override_##name swift::getOverride_##name() {                                \
+    auto *Section = getOverrideSectionPtr();                                   \
+    if (Section == nullptr)                                                    \
+      return nullptr;                                                          \
+    return Section->name;                                                      \
   }
 #include "CompatibilityOverride.def"

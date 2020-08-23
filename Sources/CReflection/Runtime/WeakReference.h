@@ -17,10 +17,10 @@
 #ifndef SWIFT_RUNTIME_WEAKREFERENCE_H
 #define SWIFT_RUNTIME_WEAKREFERENCE_H
 
+#include "../SwiftShims/Target.h"
 #include "swift/Runtime/Config.h"
 #include "swift/Runtime/HeapObject.h"
 #include "swift/Runtime/Metadata.h"
-#include "../SwiftShims/Target.h"
 
 #if SWIFT_OBJC_INTEROP
 #include "swift/Runtime/ObjCBridge.h"
@@ -77,50 +77,52 @@ class WeakReferenceBits {
   // Non-ObjC platforms don't use any markers.
   enum : uintptr_t {
 #if !SWIFT_OBJC_INTEROP
-    NativeMarkerMask  = 0,
+    NativeMarkerMask = 0,
     NativeMarkerValue = 0
 #elif defined(__x86_64__) && SWIFT_TARGET_OS_SIMULATOR
-    NativeMarkerMask  = SWIFT_ABI_X86_64_SIMULATOR_OBJC_WEAK_REFERENCE_MARKER_MASK,
-    NativeMarkerValue = SWIFT_ABI_X86_64_SIMULATOR_OBJC_WEAK_REFERENCE_MARKER_VALUE
+    NativeMarkerMask =
+        SWIFT_ABI_X86_64_SIMULATOR_OBJC_WEAK_REFERENCE_MARKER_MASK,
+    NativeMarkerValue =
+        SWIFT_ABI_X86_64_SIMULATOR_OBJC_WEAK_REFERENCE_MARKER_VALUE
 #elif defined(__x86_64__)
-    NativeMarkerMask  = SWIFT_ABI_X86_64_OBJC_WEAK_REFERENCE_MARKER_MASK,
+    NativeMarkerMask = SWIFT_ABI_X86_64_OBJC_WEAK_REFERENCE_MARKER_MASK,
     NativeMarkerValue = SWIFT_ABI_X86_64_OBJC_WEAK_REFERENCE_MARKER_VALUE
 #elif defined(__i386__)
-    NativeMarkerMask  = SWIFT_ABI_I386_OBJC_WEAK_REFERENCE_MARKER_MASK,
+    NativeMarkerMask = SWIFT_ABI_I386_OBJC_WEAK_REFERENCE_MARKER_MASK,
     NativeMarkerValue = SWIFT_ABI_I386_OBJC_WEAK_REFERENCE_MARKER_VALUE
 #elif defined(__arm__) || defined(_M_ARM)
-    NativeMarkerMask  = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_MASK,
+    NativeMarkerMask = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_MASK,
     NativeMarkerValue = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_VALUE
 #elif defined(__s390x__)
-    NativeMarkerMask  = SWIFT_ABI_S390X_OBJC_WEAK_REFERENCE_MARKER_MASK,
+    NativeMarkerMask = SWIFT_ABI_S390X_OBJC_WEAK_REFERENCE_MARKER_MASK,
     NativeMarkerValue = SWIFT_ABI_S390X_OBJC_WEAK_REFERENCE_MARKER_VALUE
 #elif defined(__arm64__) || defined(__aarch64__) || defined(_M_ARM64)
-    NativeMarkerMask  = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_MASK,
+    NativeMarkerMask = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_MASK,
     NativeMarkerValue = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_VALUE
 #else
-    #error unknown architecture
+#error unknown architecture
 #endif
   };
 
   static_assert((NativeMarkerMask & NativeMarkerValue) == NativeMarkerValue,
                 "native marker value must fall within native marker mask");
-  static_assert((NativeMarkerMask & heap_object_abi::SwiftSpareBitsMask)
-                == NativeMarkerMask,
+  static_assert((NativeMarkerMask & heap_object_abi::SwiftSpareBitsMask) ==
+                    NativeMarkerMask,
                 "native marker mask must fall within Swift spare bits");
 #if SWIFT_OBJC_INTEROP
-  static_assert((NativeMarkerMask & heap_object_abi::ObjCReservedBitsMask)
-                == heap_object_abi::ObjCReservedBitsMask,
+  static_assert((NativeMarkerMask & heap_object_abi::ObjCReservedBitsMask) ==
+                    heap_object_abi::ObjCReservedBitsMask,
                 "native marker mask must contain all ObjC tagged pointer bits");
-  static_assert((NativeMarkerValue & heap_object_abi::ObjCReservedBitsMask)
-                == 0,
+  static_assert((NativeMarkerValue & heap_object_abi::ObjCReservedBitsMask) ==
+                    0,
                 "native marker value must not interfere with ObjC bits");
 #endif
 
   uintptr_t bits;
 
- public:
+public:
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  WeakReferenceBits() { }
+  WeakReferenceBits() {}
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   WeakReferenceBits(HeapObjectSideTableEntry *newValue) {
@@ -129,7 +131,7 @@ class WeakReferenceBits {
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isNativeOrNull() const {
-    return bits == 0  ||  (bits & NativeMarkerMask) == NativeMarkerValue;
+    return bits == 0 || (bits & NativeMarkerMask) == NativeMarkerValue;
   }
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -138,8 +140,8 @@ class WeakReferenceBits {
     if (bits == 0)
       return nullptr;
     else
-      return
-        reinterpret_cast<HeapObjectSideTableEntry *>(bits & ~NativeMarkerMask);
+      return reinterpret_cast<HeapObjectSideTableEntry *>(bits &
+                                                          ~NativeMarkerMask);
   }
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -151,7 +153,6 @@ class WeakReferenceBits {
       bits = 0;
   }
 };
-
 
 class WeakReference {
   union {
@@ -190,15 +191,12 @@ class WeakReference {
     nativeValue.store(WeakReferenceBits(side), std::memory_order_relaxed);
   }
 
- public:
-
+public:
   WeakReference() : nativeValue() {}
 
-  WeakReference(std::nullptr_t)
-    : nativeValue(WeakReferenceBits(nullptr)) { }
+  WeakReference(std::nullptr_t) : nativeValue(WeakReferenceBits(nullptr)) {}
 
-  WeakReference(const WeakReference& rhs) = delete;
-
+  WeakReference(const WeakReference &rhs) = delete;
 
   void nativeInit(HeapObject *object) {
     auto side = object ? object->refCounts.formWeakReference() : nullptr;
@@ -218,7 +216,7 @@ class WeakReference {
     }
 
     auto newSide =
-      newObject ? newObject->refCounts.formWeakReference() : nullptr;
+        newObject ? newObject->refCounts.formWeakReference() : nullptr;
     auto newBits = WeakReferenceBits(newSide);
 
     auto oldBits = nativeValue.load(std::memory_order_relaxed);
@@ -253,22 +251,22 @@ class WeakReference {
   }
 
   void nativeCopyAssign(WeakReference *src) {
-    if (this == src) return;
+    if (this == src)
+      return;
     nativeDestroy();
     nativeCopyInit(src);
   }
 
   void nativeTakeAssign(WeakReference *src) {
-    if (this == src) return;
+    if (this == src)
+      return;
     nativeDestroy();
     nativeTakeInit(src);
   }
 
 #if SWIFT_OBJC_INTEROP
- private:
-  void nonnativeInit(id object) {
-    objc_initWeak(&nonnativeValue, object);
-  }
+private:
+  void nonnativeInit(id object) { objc_initWeak(&nonnativeValue, object); }
 
   void initWithNativeness(void *object, bool isNative) {
     if (isNative)
@@ -277,9 +275,7 @@ class WeakReference {
       nonnativeInit(static_cast<id>(object));
   }
 
-  void nonnativeDestroy() {
-    objc_destroyWeak(&nonnativeValue);
-  }
+  void nonnativeDestroy() { objc_destroyWeak(&nonnativeValue); }
 
   void destroyWithNativeness(bool isNative) {
     if (isNative)
@@ -288,8 +284,7 @@ class WeakReference {
       nonnativeDestroy();
   }
 
- public:
-
+public:
   void unknownInit(void *object) {
     if (isObjCTaggedPointerOrNull(object)) {
       nonnativeValue = static_cast<id>(object);
@@ -323,7 +318,7 @@ class WeakReference {
 
     // If neither is native, use ObjC.
     if (!oldIsNative && !newIsNative)
-      return (void) objc_storeWeak(&nonnativeValue, static_cast<id>(newObject));
+      return (void)objc_storeWeak(&nonnativeValue, static_cast<id>(newObject));
 
     // They don't match. Destroy and re-initialize.
     destroyWithNativeness(oldIsNative);
@@ -343,8 +338,7 @@ class WeakReference {
     if (bits.isNativeOrNull()) {
       nativeValue.store(nullptr, std::memory_order_relaxed);
       return nativeTakeStrongFromBits(bits);
-    }
-    else {
+    } else {
       id result = objc_loadWeakRetained(&nonnativeValue);
       objc_destroyWeak(&nonnativeValue);
       return result;
@@ -368,28 +362,29 @@ class WeakReference {
   }
 
   void unknownCopyAssign(WeakReference *src) {
-    if (this == src) return;
+    if (this == src)
+      return;
     unknownDestroy();
     unknownCopyInit(src);
   }
 
   void unknownTakeAssign(WeakReference *src) {
-    if (this == src) return;
+    if (this == src)
+      return;
     unknownDestroy();
     unknownTakeInit(src);
   }
 
 // SWIFT_OBJC_INTEROP
 #endif
-
 };
 
-static_assert(sizeof(WeakReference) == sizeof(void*),
+static_assert(sizeof(WeakReference) == sizeof(void *),
               "incorrect WeakReference size");
-static_assert(alignof(WeakReference) == alignof(void*),
+static_assert(alignof(WeakReference) == alignof(void *),
               "incorrect WeakReference alignment");
 
 // namespace swift
-}
+} // namespace swift
 
 #endif

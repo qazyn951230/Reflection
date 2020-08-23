@@ -83,13 +83,9 @@ public struct FieldRecord: UnsafeRawRepresentable {
     }
 
     public var mangledTypeName: String? {
-        let name = rawValue.pointee.mangledTypeName
-        guard name != 0, let offset = MemoryLayout.offset(of: \RawValue.mangledTypeName) else {
-            return nil
-        }
-        let c = rawValue.reinterpretCast(to: Int8.self)
-            .advanced(by: offset + Int(name))
-        return String(cString: c)
+        let c = RelativeDirectPointer.resolve(any: rawValue, keyPath: \RawValue.mangledTypeName)
+        return (c?.reinterpretCast(to: Int8.self))
+            .map(String.init(cString:))
     }
 
     var cMangledTypeName: UnsafePointer<UInt8> {
@@ -98,13 +94,9 @@ public struct FieldRecord: UnsafeRawRepresentable {
     }
 
     public var fieldName: String? {
-        let name = rawValue.pointee.fieldName
-        guard name != 0, let offset = MemoryLayout.offset(of: \RawValue.fieldName) else {
-            return nil
-        }
-        let c = rawValue.reinterpretCast(to: Int8.self)
-            .advanced(by: offset + Int(name))
-        return String(cString: c)
+        let c = RelativeDirectPointer.resolve(any: rawValue, keyPath: \RawValue.fieldName)
+        return (c?.reinterpretCast(to: Int8.self))
+            .map(String.init(cString:))
     }
 
     public struct RawValue {

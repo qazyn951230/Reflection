@@ -24,9 +24,7 @@ namespace swift {
 /// Store the given 4-byte unsigned integer value into the variable-
 /// length destination buffer. The value will be zero extended or
 /// truncated to fit in the buffer.
-static inline void storeEnumElement(uint8_t *dst,
-                                    uint32_t value,
-                                    size_t size) {
+static inline void storeEnumElement(uint8_t *dst, uint32_t value, size_t size) {
   // Note: we use fixed size memcpys to encourage the compiler to
   // optimize them into unaligned stores.
   switch (size) {
@@ -64,8 +62,7 @@ static inline void storeEnumElement(uint8_t *dst,
 /// Load a 4-byte unsigned integer value from the variable-length
 /// source buffer. The value will be zero-extended or truncated to fit
 /// into the returned value.
-static inline uint32_t loadEnumElement(const uint8_t *src,
-                                       size_t size) {
+static inline uint32_t loadEnumElement(const uint8_t *src, size_t size) {
   // Note: we use fixed size memcpys to encourage the compiler to
   // optimize them into unaligned loads.
   uint32_t result = 0;
@@ -99,19 +96,20 @@ static inline uint32_t loadEnumElement(const uint8_t *src,
   return result;
 }
 
-inline unsigned getEnumTagSinglePayloadImpl(
-    const OpaqueValue *enumAddr, unsigned emptyCases, const Metadata *payload,
-    size_t payloadSize, unsigned payloadNumExtraInhabitants,
-    getExtraInhabitantTag_t *getExtraInhabitantTag) {
+inline unsigned
+getEnumTagSinglePayloadImpl(const OpaqueValue *enumAddr, unsigned emptyCases,
+                            const Metadata *payload, size_t payloadSize,
+                            unsigned payloadNumExtraInhabitants,
+                            getExtraInhabitantTag_t *getExtraInhabitantTag) {
 
   // If there are extra tag bits, check them.
   if (emptyCases > payloadNumExtraInhabitants) {
     auto *valueAddr = reinterpret_cast<const uint8_t *>(enumAddr);
     auto *extraTagBitAddr = valueAddr + payloadSize;
     unsigned numBytes =
-        getEnumTagCounts(payloadSize,
-                         emptyCases - payloadNumExtraInhabitants,
-                         1 /*payload case*/).numTagBytes;
+        getEnumTagCounts(payloadSize, emptyCases - payloadNumExtraInhabitants,
+                         1 /*payload case*/)
+            .numTagBytes;
 
     unsigned extraTagBits = loadEnumElement(extraTagBitAddr, numBytes);
 
@@ -150,7 +148,8 @@ inline void storeEnumTagSinglePayloadImpl(
       emptyCases > payloadNumExtraInhabitants
           ? getEnumTagCounts(payloadSize,
                              emptyCases - payloadNumExtraInhabitants,
-                             1 /*payload case*/).numTagBytes
+                             1 /*payload case*/)
+                .numTagBytes
           : 0;
 
   // For payload or extra inhabitant cases, zero-initialize the extra tag bits,
@@ -182,7 +181,7 @@ inline void storeEnumTagSinglePayloadImpl(
     payloadIndex = caseIndex & ((1U << payloadBits) - 1U);
   }
 
-    // Store into the value.
+  // Store into the value.
   if (payloadSize)
     storeEnumElement(valueAddr, payloadIndex, payloadSize);
   if (numExtraTagBytes)

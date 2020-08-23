@@ -22,8 +22,8 @@
 #define SWIFT_RUNTIME_IMAGEINSPECTION_H
 
 #include "ImageInspectionELF.h"
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #if defined(__cplusplus)
 #include <memory>
 #endif
@@ -33,14 +33,12 @@ namespace swift {
 /// This is a platform independent version of Dl_info from dlfcn.h
 #if defined(__cplusplus)
 
-template <typename T>
-struct null_deleter {
+template <typename T> struct null_deleter {
   void operator()(T *) const {}
   void operator()(typename std::remove_cv<T>::type *value) const {}
 };
 
-template <typename T>
-struct free_deleter {
+template <typename T> struct free_deleter {
   void operator()(T *value) const {
     free(const_cast<typename std::remove_cv<T>::type *>(value));
   }
@@ -81,8 +79,7 @@ void addImageProtocolConformanceBlockCallback(const void *start,
                                               uintptr_t size);
 void addImageProtocolConformanceBlockCallbackUnsafe(const void *start,
                                                     uintptr_t size);
-void addImageTypeMetadataRecordBlockCallback(const void *start,
-                                             uintptr_t size);
+void addImageTypeMetadataRecordBlockCallback(const void *start, uintptr_t size);
 void addImageTypeMetadataRecordBlockCallbackUnsafe(const void *start,
                                                    uintptr_t size);
 void addImageDynamicReplacementBlockCallback(const void *start, uintptr_t size,

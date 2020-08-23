@@ -16,11 +16,11 @@
 
 #include "swift/Runtime/Metadata.h"
 #include "MetadataCache.h"
+#include "swift/ABI/TypeIdentity.h"
 #include "swift/Basic/LLVM.h"
 #include "swift/Basic/Lazy.h"
 #include "swift/Basic/Range.h"
 #include "swift/Demangling/Demangler.h"
-#include "swift/ABI/TypeIdentity.h"
 #include "swift/Runtime/Casting.h"
 #include "swift/Runtime/ExistentialContainer.h"
 #include "swift/Runtime/HeapObject.h"
@@ -42,17 +42,17 @@
 #define NOMINMAX
 #include <windows.h>
 #else
+#include <dlfcn.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <dlfcn.h>
 #endif
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Hashing.h"
 #include "CompatibilityOverride.h"
 #include "ErrorObject.h"
 #include "ExistentialMetadataImpl.h"
-#include "swift/Runtime/Debug.h"
 #include "Private.h"
+#include "swift/Runtime/Debug.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 
 #if defined(__APPLE__)
 #include <mach/vm_page_size.h>
@@ -73,10 +73,11 @@
 using namespace swift;
 using namespace metadataimpl;
 
-//template<>
-//Metadata *TargetSingletonMetadataInitialization<InProcess>::allocate(
+// template<>
+// Metadata *TargetSingletonMetadataInitialization<InProcess>::allocate(
 //    const TypeContextDescriptor *description) const {
-//  // If this class has resilient ancestry, the size of the metadata is not known
+//  // If this class has resilient ancestry, the size of the metadata is not
+//  known
 //  // at compile time, so we allocate it dynamically, filling it in from a
 //  // pattern.
 //  if (hasResilientClassPattern(description)) {
@@ -96,12 +97,14 @@ using namespace metadataimpl;
 //
 //  // If this is a class, we have to initialize the value witness table early
 //  // so that two-phase initialization can proceed as if this metadata is
-//  // complete for layout purposes when it appears as part of an aggregate type.
+//  // complete for layout purposes when it appears as part of an aggregate
+//  type.
 //  //
 //  // Note that we can't use (dyn_)cast<ClassMetadata> here because the static
 //  // template may have the "wrong" isSwift bit set in its Data pointer, if the
 //  // binary was built to deploy back to pre-stable-Swift Objective-C runtimes.
-//  // Such a template will fail the `isTypeMetadata` test and we'll think that it
+//  // Such a template will fail the `isTypeMetadata` test and we'll think that
+//  it
 //  // isn't Swift metadata but a plain old ObjC class instead.
 //  if (metadata->getKind() == MetadataKind::Class) {
 //    auto *classMetadata = static_cast<ClassMetadata*>(metadata);
@@ -124,7 +127,7 @@ using namespace metadataimpl;
 //}
 //
 ///// Copy the generic arguments into place in a newly-allocated metadata.
-//static void installGenericArguments(Metadata *metadata,
+// static void installGenericArguments(Metadata *metadata,
 //                                    const TypeContextDescriptor *description,
 //                                    const void *arguments) {
 //  auto &generics = description->getFullGenericContextHeader();
@@ -146,11 +149,10 @@ static ClassMetadataBounds computeMetadataBoundsForObjCClass(Class cls) {
 #endif
 
 static ClassMetadataBounds
-computeMetadataBoundsForSuperclass(const void *ref,
-                                   TypeReferenceKind refKind) {
+computeMetadataBoundsForSuperclass(const void *ref, TypeReferenceKind refKind) {
   switch (refKind) {
   case TypeReferenceKind::IndirectTypeDescriptor: {
-    auto description = *reinterpret_cast<const ClassDescriptor * const *>(ref);
+    auto description = *reinterpret_cast<const ClassDescriptor *const *>(ref);
     if (!description) {
       swift::fatalError(0, "instantiating class metadata for class with "
                            "missing weak-linked ancestor");
@@ -184,16 +186,16 @@ computeMetadataBoundsForSuperclass(const void *ref,
   swift_runtime_unreachable("unsupported superclass reference kind");
 }
 
-static ClassMetadataBounds computeMetadataBoundsFromSuperclass(
-                                      const ClassDescriptor *description,
-                                      StoredClassMetadataBounds &storedBounds) {
+static ClassMetadataBounds
+computeMetadataBoundsFromSuperclass(const ClassDescriptor *description,
+                                    StoredClassMetadataBounds &storedBounds) {
   ClassMetadataBounds bounds;
 
   // Compute the bounds for the superclass, extending it to the minimum
   // bounds of a Swift class.
   if (const void *superRef = description->getResilientSuperclass()) {
-    bounds = computeMetadataBoundsForSuperclass(superRef,
-                           description->getResilientSuperclassReferenceKind());
+    bounds = computeMetadataBoundsForSuperclass(
+        superRef, description->getResilientSuperclassReferenceKind());
   } else {
     bounds = ClassMetadataBounds::forSwiftRootClass();
   }
@@ -227,20 +229,20 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 
   ptrdiff_t result;
   if (storedBounds.tryGetImmediateMembersOffset(result)) {
-    return result / sizeof(void*);
+    return result / sizeof(void *);
   }
 
   auto bounds = computeMetadataBoundsFromSuperclass(description, storedBounds);
-  return bounds.ImmediateMembersOffset / sizeof(void*);
+  return bounds.ImmediateMembersOffset / sizeof(void *);
 }
 
-//static bool
-//areAllTransitiveMetadataComplete_cheap(const Metadata *metadata);
+// static bool
+// areAllTransitiveMetadataComplete_cheap(const Metadata *metadata);
 //
-//static MetadataDependency
-//checkTransitiveCompleteness(const Metadata *metadata);
+// static MetadataDependency
+// checkTransitiveCompleteness(const Metadata *metadata);
 //
-//static PrivateMetadataState inferStateForMetadata(Metadata *metadata) {
+// static PrivateMetadataState inferStateForMetadata(Metadata *metadata) {
 //  if (metadata->getValueWitnesses()->isIncomplete())
 //    return PrivateMetadataState::Abstract;
 //
@@ -248,7 +250,7 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //  return PrivateMetadataState::LayoutComplete;
 //}
 //
-//namespace {
+// namespace {
 //  struct GenericCacheEntry final :
 //      VariadicMetadataCacheEntryBase<GenericCacheEntry> {
 //    static const char *getName() { return "GenericCache"; }
@@ -319,13 +321,14 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //  };
 //} // end anonymous namespace
 //
-//namespace {
-//  class GenericMetadataCache : public MetadataCache<GenericCacheEntry, false> {
-//  public:
+// namespace {
+//  class GenericMetadataCache : public MetadataCache<GenericCacheEntry, false>
+//  { public:
 //    uint16_t NumKeyParameters;
 //    uint16_t NumWitnessTables;
 //
-//    GenericMetadataCache(const TargetGenericContext<InProcess> &genericContext)
+//    GenericMetadataCache(const TargetGenericContext<InProcess>
+//    &genericContext)
 //        : NumKeyParameters(0), NumWitnessTables(0) {
 //      // Count up the # of key parameters and # of witness tables.
 //
@@ -348,7 +351,7 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //}
 //
 ///// Fetch the metadata cache for a generic metadata structure.
-//static GenericMetadataCache &getCache(
+// static GenericMetadataCache &getCache(
 //                               const TypeContextDescriptor &description) {
 //  auto &generics = description.getFullGenericContextHeader();
 //
@@ -365,7 +368,7 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //
 ///// Fetch the metadata cache for a generic metadata structure,
 ///// in a context where it must have already been initialized.
-//static GenericMetadataCache &unsafeGetInitializedCache(
+// static GenericMetadataCache &unsafeGetInitializedCache(
 //    const TypeGenericContextDescriptorHeader &generics) {
 //  // Keep this assert even if you change the representation above.
 //  static_assert(sizeof(LazyGenericMetadataCache) <=
@@ -379,21 +382,23 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //}
 //
 //#if SWIFT_OBJC_INTEROP
-//extern "C" void *_objc_empty_cache;
+// extern "C" void *_objc_empty_cache;
 //#endif
 //
-//static void copyMetadataPattern(void **section,
-//                                const GenericMetadataPartialPattern *pattern) {
+// static void copyMetadataPattern(void **section,
+//                                const GenericMetadataPartialPattern *pattern)
+//                                {
 //  memcpy(section + pattern->OffsetInWords,
 //         pattern->Pattern.get(),
 //         size_t(pattern->SizeInWords) * sizeof(void*));
 //}
 //
-//static void
-//initializeClassMetadataFromPattern(ClassMetadata *metadata,
+// static void
+// initializeClassMetadataFromPattern(ClassMetadata *metadata,
 //                                   ClassMetadataBounds bounds,
 //                                   const ClassDescriptor *description,
-//                                   const GenericClassMetadataPattern *pattern) {
+//                                   const GenericClassMetadataPattern *pattern)
+//                                   {
 //  auto fullMetadata = asFullMetadata(metadata);
 //  char *rawMetadata = reinterpret_cast<char*>(metadata);
 //
@@ -500,10 +505,11 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //  metadata->IVarDestroyer = pattern->IVarDestroyer;
 //}
 //
-//ClassMetadata *
-//swift::swift_allocateGenericClassMetadata(const ClassDescriptor *description,
+// ClassMetadata *
+// swift::swift_allocateGenericClassMetadata(const ClassDescriptor *description,
 //                                          const void *arguments,
-//                                    const GenericClassMetadataPattern *pattern){
+//                                    const GenericClassMetadataPattern
+//                                    *pattern){
 //  auto &generics = description->getFullGenericContextHeader();
 //  auto &cache = unsafeGetInitializedCache(generics);
 //
@@ -535,10 +541,11 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //  return metadata;
 //}
 //
-//static void
-//initializeValueMetadataFromPattern(ValueMetadata *metadata,
+// static void
+// initializeValueMetadataFromPattern(ValueMetadata *metadata,
 //                                   const ValueTypeDescriptor *description,
-//                                   const GenericValueMetadataPattern *pattern) {
+//                                   const GenericValueMetadataPattern *pattern)
+//                                   {
 //  auto fullMetadata = asFullMetadata(metadata);
 //  char *rawMetadata = reinterpret_cast<char*>(metadata);
 //
@@ -566,10 +573,12 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //  metadata->Description = description;
 //}
 //
-//ValueMetadata *
-//swift::swift_allocateGenericValueMetadata(const ValueTypeDescriptor *description,
+// ValueMetadata *
+// swift::swift_allocateGenericValueMetadata(const ValueTypeDescriptor
+// *description,
 //                                          const void *arguments,
-//                                    const GenericValueMetadataPattern *pattern,
+//                                    const GenericValueMetadataPattern
+//                                    *pattern,
 //                                          size_t extraDataSize) {
 //  auto &generics = description->getFullGenericContextHeader();
 //  auto &cache = unsafeGetInitializedCache(generics);
@@ -587,7 +596,8 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //
 //  size_t totalSize = sizeof(FullMetadata<ValueMetadata>) + extraDataSize;
 //
-//  auto bytes = (char*) cache.getAllocator().Allocate(totalSize, alignof(void*));
+//  auto bytes = (char*) cache.getAllocator().Allocate(totalSize,
+//  alignof(void*));
 //
 //  auto addressPoint = bytes + sizeof(ValueMetadata::HeaderType);
 //  auto metadata = reinterpret_cast<ValueMetadata *>(addressPoint);
@@ -601,8 +611,8 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //}
 //
 ///// The primary entrypoint.
-//MetadataResponse
-//swift::swift_getGenericMetadata(MetadataRequest request,
+// MetadataResponse
+// swift::swift_getGenericMetadata(MetadataRequest request,
 //                                const void * const *arguments,
 //                                const TypeContextDescriptor *description) {
 //  auto &cache = getCache(*description);
@@ -619,7 +629,7 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 ///*** In-place metadata initialization **************************************/
 ///***************************************************************************/
 //
-//namespace {
+// namespace {
 //  /// A cache entry for "in-place" metadata initializations.
 //  class SingletonMetadataCacheEntry final
 //      : public MetadataCacheEntryBase<SingletonMetadataCacheEntry, int> {
@@ -643,7 +653,8 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //    SingletonMetadataCacheEntry() {}
 //
 //    AllocationResult allocate(const TypeContextDescriptor *description) {
-//      auto &initialization = description->getSingletonMetadataInitialization();
+//      auto &initialization =
+//      description->getSingletonMetadataInitialization();
 //
 //      // Classes with resilient superclasses might require their metadata to
 //      // be relocated.
@@ -724,18 +735,20 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //        if (cache.Private.compare_exchange_strong(existingEntry,
 //                                                  allocatedEntry,
 //                                                  std::memory_order_acq_rel,
-//                                                  std::memory_order_acquire)) {
+//                                                  std::memory_order_acquire))
+//                                                  {
 //          // If that succeeded, return the entry we allocated and tell the
 //          // caller we allocated it.
 //          return { allocatedEntry, true };
 //        }
 //
 //        // Otherwise, use the new entry and destroy the one we allocated.
-//        assert(existingEntry && "spurious failure of strong compare-exchange?");
-//        delete allocatedEntry;
+//        assert(existingEntry && "spurious failure of strong
+//        compare-exchange?"); delete allocatedEntry;
 //      }
 //
-//      return { static_cast<SingletonMetadataCacheEntry*>(existingEntry), false };
+//      return { static_cast<SingletonMetadataCacheEntry*>(existingEntry), false
+//      };
 //    }
 //
 //    EntryType *find(KeyType key) {
@@ -761,10 +774,10 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //} // end anonymous namespace
 //
 ///// The cache of all in-place metadata initializations.
-//static Lazy<SingletonTypeMetadataCache> SingletonMetadata;
+// static Lazy<SingletonTypeMetadataCache> SingletonMetadata;
 //
-//MetadataResponse
-//swift::swift_getSingletonMetadata(MetadataRequest request,
+// MetadataResponse
+// swift::swift_getSingletonMetadata(MetadataRequest request,
 //                                  const TypeContextDescriptor *description) {
 //  auto result = SingletonMetadata.get().getOrInsert(description, request,
 //                                                    description);
@@ -778,7 +791,7 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 
 #if SWIFT_OBJC_INTEROP
 
-//namespace {
+// namespace {
 //  class ObjCClassCacheEntry {
 //  public:
 //    FullMetadata<ObjCClassWrapperMetadata> Data;
@@ -807,10 +820,10 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //}
 //
 ///// The uniquing structure for ObjC class-wrapper metadata.
-//static SimpleGlobalCache<ObjCClassCacheEntry> ObjCClassWrappers;
+// static SimpleGlobalCache<ObjCClassCacheEntry> ObjCClassWrappers;
 //
-//const Metadata *
-//swift::swift_getObjCClassMetadata(const ClassMetadata *theClass) {
+// const Metadata *
+// swift::swift_getObjCClassMetadata(const ClassMetadata *theClass) {
 //  // Make calls resilient against receiving a null Objective-C class. This can
 //  // happen when classes are weakly linked and not available.
 //  if (theClass == nullptr)
@@ -824,8 +837,8 @@ swift::getResilientImmediateMembersOffset(const ClassDescriptor *description) {
 //  return &ObjCClassWrappers.getOrInsert(theClass).first->Data;
 //}
 //
-//const ClassMetadata *
-//swift::swift_getObjCClassFromMetadata(const Metadata *theMetadata) {
+// const ClassMetadata *
+// swift::swift_getObjCClassFromMetadata(const Metadata *theMetadata) {
 //  // Unwrap ObjC class wrappers.
 //  if (auto wrapper = dyn_cast<ObjCClassWrapperMetadata>(theMetadata)) {
 //    return wrapper->Class;
@@ -859,10 +872,10 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 /*** Functions *************************************************************/
 /***************************************************************************/
 
-//namespace {
+// namespace {
 //
-//class FunctionCacheEntry {
-//public:
+// class FunctionCacheEntry {
+// public:
 //  FullMetadata<FunctionTypeMetadata> Data;
 //
 //  struct Key {
@@ -938,18 +951,18 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //} // end anonymous namespace
 //
 ///// The uniquing structure for function type metadata.
-//static SimpleGlobalCache<FunctionCacheEntry> FunctionTypes;
+// static SimpleGlobalCache<FunctionCacheEntry> FunctionTypes;
 //
-//const FunctionTypeMetadata *
-//swift::swift_getFunctionTypeMetadata0(FunctionTypeFlags flags,
+// const FunctionTypeMetadata *
+// swift::swift_getFunctionTypeMetadata0(FunctionTypeFlags flags,
 //                                      const Metadata *result) {
 //  assert(flags.getNumParameters() == 0
 //         && "wrong number of arguments in function metadata flags?!");
 //  return swift_getFunctionTypeMetadata(flags, nullptr, nullptr, result);
 //}
 //
-//const FunctionTypeMetadata *
-//swift::swift_getFunctionTypeMetadata1(FunctionTypeFlags flags,
+// const FunctionTypeMetadata *
+// swift::swift_getFunctionTypeMetadata1(FunctionTypeFlags flags,
 //                                      const Metadata *arg0,
 //                                      const Metadata *result) {
 //  assert(flags.getNumParameters() == 1
@@ -958,8 +971,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return swift_getFunctionTypeMetadata(flags, parameters, nullptr, result);
 //}
 //
-//const FunctionTypeMetadata *
-//swift::swift_getFunctionTypeMetadata2(FunctionTypeFlags flags,
+// const FunctionTypeMetadata *
+// swift::swift_getFunctionTypeMetadata2(FunctionTypeFlags flags,
 //                                      const Metadata *arg0,
 //                                      const Metadata *arg1,
 //                                      const Metadata *result) {
@@ -969,8 +982,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return swift_getFunctionTypeMetadata(flags, parameters, nullptr, result);
 //}
 //
-//const FunctionTypeMetadata *
-//swift::swift_getFunctionTypeMetadata3(FunctionTypeFlags flags,
+// const FunctionTypeMetadata *
+// swift::swift_getFunctionTypeMetadata3(FunctionTypeFlags flags,
 //                                      const Metadata *arg0,
 //                                      const Metadata *arg1,
 //                                      const Metadata *arg2,
@@ -981,8 +994,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return swift_getFunctionTypeMetadata(flags, parameters, nullptr, result);
 //}
 //
-//const FunctionTypeMetadata *
-//swift::swift_getFunctionTypeMetadata(FunctionTypeFlags flags,
+// const FunctionTypeMetadata *
+// swift::swift_getFunctionTypeMetadata(FunctionTypeFlags flags,
 //                                     const Metadata *const *parameters,
 //                                     const uint32_t *parameterFlags,
 //                                     const Metadata *result) {
@@ -990,7 +1003,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return &FunctionTypes.getOrInsert(key).first->Data;
 //}
 //
-//FunctionCacheEntry::FunctionCacheEntry(const Key &key) {
+// FunctionCacheEntry::FunctionCacheEntry(const Key &key) {
 //  auto flags = key.getFlags();
 //
 //  // Pick a value witness table appropriate to the function convention.
@@ -1038,12 +1051,12 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 ///*** Tuples ****************************************************************/
 ///***************************************************************************/
 //
-//namespace {
+// namespace {
 //
-//class TupleCacheEntry
+// class TupleCacheEntry
 //    : public MetadataCacheEntryBase<TupleCacheEntry,
 //                                    TupleTypeMetadata::Element> {
-//public:
+// public:
 //  static const char *getName() { return "TupleCache"; }
 //
 //  // NOTE: if you change the layout of this type, you'll also need
@@ -1072,7 +1085,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //
 //  TryInitializeResult tryInitialize(Metadata *metadata,
 //                                    PrivateMetadataState state,
-//                                    PrivateMetadataCompletionContext *context);
+//                                    PrivateMetadataCompletionContext
+//                                    *context);
 //
 //  TryInitializeResult checkTransitiveCompleteness() {
 //    auto dependency = ::checkTransitiveCompleteness(&Data);
@@ -1093,7 +1107,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //    // Order by the cheaper comparisons first:
 //
 //    // The number of elements.
-//    if (auto result = compareIntegers(key.NumElements,(size_t)Data.NumElements))
+//    if (auto result =
+//    compareIntegers(key.NumElements,(size_t)Data.NumElements))
 //      return result;
 //
 //    // The element types.
@@ -1131,9 +1146,9 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  }
 //};
 //
-//class TupleCacheStorage :
+// class TupleCacheStorage :
 //  public LockingConcurrentMapStorage<TupleCacheEntry, false> {
-//public:
+// public:
 //// FIXME: https://bugs.swift.org/browse/SR-1155
 //#pragma clang diagnostic push
 //#pragma clang diagnostic ignored "-Winvalid-offsetof"
@@ -1149,24 +1164,25 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //#pragma clang diagnostic pop
 //};
 //
-//class TupleCache :
+// class TupleCache :
 //  public LockingConcurrentMap<TupleCacheEntry, TupleCacheStorage> {
 //};
 //
 //} // end anonymous namespace
 //
 ///// The uniquing structure for tuple type metadata.
-//static Lazy<TupleCache> TupleTypes;
+// static Lazy<TupleCache> TupleTypes;
 //
 ///// Given a metatype pointer, produce the value-witness table for it.
 ///// This is equivalent to metatype->ValueWitnesses but more efficient.
-//static const ValueWitnessTable *tuple_getValueWitnesses(const Metadata *metatype) {
+// static const ValueWitnessTable *tuple_getValueWitnesses(const Metadata
+// *metatype) {
 //  return ((const ValueWitnessTable*) asFullMetadata(metatype)) - 1;
 //}
 //
 ///// Generic tuple value witness for 'projectBuffer'.
-//template <bool IsPOD, bool IsInline>
-//static OpaqueValue *tuple_projectBuffer(ValueBuffer *buffer,
+// template <bool IsPOD, bool IsInline>
+// static OpaqueValue *tuple_projectBuffer(ValueBuffer *buffer,
 //                                        const Metadata *metatype) {
 //  assert(IsPOD == tuple_getValueWitnesses(metatype)->isPOD());
 //  assert(IsInline == tuple_getValueWitnesses(metatype)->isValueInline());
@@ -1184,8 +1200,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 ///// Generic tuple value witness for 'allocateBuffer'
-//template <bool IsPOD, bool IsInline>
-//static OpaqueValue *tuple_allocateBuffer(ValueBuffer *buffer,
+// template <bool IsPOD, bool IsInline>
+// static OpaqueValue *tuple_allocateBuffer(ValueBuffer *buffer,
 //                                         const Metadata *metatype) {
 //  assert(IsPOD == tuple_getValueWitnesses(metatype)->isPOD());
 //  assert(IsInline == tuple_getValueWitnesses(metatype)->isValueInline());
@@ -1198,8 +1214,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 ///// Generic tuple value witness for 'destroy'.
-//template <bool IsPOD, bool IsInline>
-//static void tuple_destroy(OpaqueValue *tuple, const Metadata *_metadata) {
+// template <bool IsPOD, bool IsInline>
+// static void tuple_destroy(OpaqueValue *tuple, const Metadata *_metadata) {
 //  auto &metadata = *(const TupleTypeMetadata*) _metadata;
 //  assert(IsPOD == tuple_getValueWitnesses(&metadata)->isPOD());
 //  assert(IsInline == tuple_getValueWitnesses(&metadata)->isValueInline());
@@ -1216,10 +1232,10 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //
 //// The operation doesn't have to be initializeWithCopy, but they all
 //// have basically the same type.
-//typedef ValueWitnessTypes::initializeWithCopy forEachOperation;
+// typedef ValueWitnessTypes::initializeWithCopy forEachOperation;
 //
 ///// Perform an operation for each field of two tuples.
-//static OpaqueValue *tuple_forEachField(OpaqueValue *destTuple,
+// static OpaqueValue *tuple_forEachField(OpaqueValue *destTuple,
 //                                       OpaqueValue *srcTuple,
 //                                       const Metadata *_metatype,
 //                                       forEachOperation operation) {
@@ -1235,7 +1251,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 ///// Perform a naive memcpy of src into dest.
-//static OpaqueValue *tuple_memcpy(OpaqueValue *dest,
+// static OpaqueValue *tuple_memcpy(OpaqueValue *dest,
 //                                 OpaqueValue *src,
 //                                 const Metadata *metatype) {
 //  assert(metatype->getValueWitnesses()->isPOD());
@@ -1244,8 +1260,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 ///// Generic tuple value witness for 'initializeWithCopy'.
-//template <bool IsPOD, bool IsInline>
-//static OpaqueValue *tuple_initializeWithCopy(OpaqueValue *dest,
+// template <bool IsPOD, bool IsInline>
+// static OpaqueValue *tuple_initializeWithCopy(OpaqueValue *dest,
 //                                             OpaqueValue *src,
 //                                             const Metadata *metatype) {
 //  assert(IsPOD == tuple_getValueWitnesses(metatype)->isPOD());
@@ -1259,8 +1275,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 ///// Generic tuple value witness for 'initializeWithTake'.
-//template <bool IsPOD, bool IsInline>
-//static OpaqueValue *tuple_initializeWithTake(OpaqueValue *dest,
+// template <bool IsPOD, bool IsInline>
+// static OpaqueValue *tuple_initializeWithTake(OpaqueValue *dest,
 //                                             OpaqueValue *src,
 //                                             const Metadata *metatype) {
 //  assert(IsPOD == tuple_getValueWitnesses(metatype)->isPOD());
@@ -1274,8 +1290,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 ///// Generic tuple value witness for 'assignWithCopy'.
-//template <bool IsPOD, bool IsInline>
-//static OpaqueValue *tuple_assignWithCopy(OpaqueValue *dest,
+// template <bool IsPOD, bool IsInline>
+// static OpaqueValue *tuple_assignWithCopy(OpaqueValue *dest,
 //                                         OpaqueValue *src,
 //                                         const Metadata *metatype) {
 //  assert(IsPOD == tuple_getValueWitnesses(metatype)->isPOD());
@@ -1289,8 +1305,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 ///// Generic tuple value witness for 'assignWithTake'.
-//template <bool IsPOD, bool IsInline>
-//static OpaqueValue *tuple_assignWithTake(OpaqueValue *dest,
+// template <bool IsPOD, bool IsInline>
+// static OpaqueValue *tuple_assignWithTake(OpaqueValue *dest,
 //                                         OpaqueValue *src,
 //                                         const Metadata *metatype) {
 //  if (IsPOD) return tuple_memcpy(dest, src, metatype);
@@ -1301,10 +1317,11 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 ///// Generic tuple value witness for 'initializeBufferWithCopyOfBuffer'.
-//template <bool IsPOD, bool IsInline>
-//static OpaqueValue *tuple_initializeBufferWithCopyOfBuffer(ValueBuffer *dest,
+// template <bool IsPOD, bool IsInline>
+// static OpaqueValue *tuple_initializeBufferWithCopyOfBuffer(ValueBuffer *dest,
 //                                                           ValueBuffer *src,
-//                                                     const Metadata *metatype) {
+//                                                     const Metadata *metatype)
+//                                                     {
 //  assert(IsPOD == tuple_getValueWitnesses(metatype)->isPOD());
 //  assert(IsInline == tuple_getValueWitnesses(metatype)->isValueInline());
 //  if (IsInline) {
@@ -1319,8 +1336,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return tuple_projectBuffer<IsPOD, IsInline>(dest, metatype);
 //}
 //
-//SWIFT_CC(swift)
-//static void tuple_storeExtraInhabitantTag(OpaqueValue *tuple,
+// SWIFT_CC(swift)
+// static void tuple_storeExtraInhabitantTag(OpaqueValue *tuple,
 //                                          unsigned tag,
 //                                          unsigned xiCount,
 //                                          const Metadata *_metatype) {
@@ -1337,8 +1354,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  eltInfo.Type->vw_storeEnumTagSinglePayload(elt, tag, xiCount);
 //}
 //
-//SWIFT_CC(swift)
-//static unsigned tuple_getExtraInhabitantTag(const OpaqueValue *tuple,
+// SWIFT_CC(swift)
+// static unsigned tuple_getExtraInhabitantTag(const OpaqueValue *tuple,
 //                                            unsigned xiCount,
 //                                            const Metadata *_metatype) {
 //  auto &metatype = *(const TupleTypeMetadata*) _metatype;
@@ -1352,8 +1369,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return eltInfo.Type->vw_getEnumTagSinglePayload(elt, xiCount);
 //}
 //
-//template <bool IsPOD, bool IsInline>
-//static unsigned tuple_getEnumTagSinglePayload(const OpaqueValue *enumAddr,
+// template <bool IsPOD, bool IsInline>
+// static unsigned tuple_getEnumTagSinglePayload(const OpaqueValue *enumAddr,
 //                                              unsigned numEmptyCases,
 //                                              const Metadata *self) {
 //
@@ -1367,21 +1384,23 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //                                     getExtraInhabitantTag);
 //}
 //
-//template <bool IsPOD, bool IsInline>
-//static void
-//tuple_storeEnumTagSinglePayload(OpaqueValue *enumAddr, unsigned whichCase,
-//                                unsigned numEmptyCases, const Metadata *self) {
+// template <bool IsPOD, bool IsInline>
+// static void
+// tuple_storeEnumTagSinglePayload(OpaqueValue *enumAddr, unsigned whichCase,
+//                                unsigned numEmptyCases, const Metadata *self)
+//                                {
 //  auto *witnesses = tuple_getValueWitnesses(self);
 //  auto size = witnesses->getSize();
 //  auto numExtraInhabitants = witnesses->getNumExtraInhabitants();
 //  auto storeExtraInhabitantTag = tuple_storeExtraInhabitantTag;
 //
-//  storeEnumTagSinglePayloadImpl(enumAddr, whichCase, numEmptyCases, self, size,
+//  storeEnumTagSinglePayloadImpl(enumAddr, whichCase, numEmptyCases, self,
+//  size,
 //                                numExtraInhabitants, storeExtraInhabitantTag);
 //}
 //
 ///// Various standard witness table for tuples.
-//static const ValueWitnessTable tuple_witnesses_pod_inline = {
+// static const ValueWitnessTable tuple_witnesses_pod_inline = {
 //#define WANT_ONLY_REQUIRED_VALUE_WITNESSES
 //#define VALUE_WITNESS(LOWER_ID, UPPER_ID) &tuple_##LOWER_ID<true, true>,
 //#define DATA_VALUE_WITNESS(LOWER_ID, UPPER_ID, TYPE)
@@ -1391,7 +1410,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  ValueWitnessFlags(),
 //  0
 //};
-//static const ValueWitnessTable tuple_witnesses_nonpod_inline = {
+// static const ValueWitnessTable tuple_witnesses_nonpod_inline = {
 //#define WANT_ONLY_REQUIRED_VALUE_WITNESSES
 //#define VALUE_WITNESS(LOWER_ID, UPPER_ID) &tuple_##LOWER_ID<false, true>,
 //#define DATA_VALUE_WITNESS(LOWER_ID, UPPER_ID, TYPE)
@@ -1401,7 +1420,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  ValueWitnessFlags(),
 //  0
 //};
-//static const ValueWitnessTable tuple_witnesses_pod_noninline = {
+// static const ValueWitnessTable tuple_witnesses_pod_noninline = {
 //#define WANT_ONLY_REQUIRED_VALUE_WITNESSES
 //#define VALUE_WITNESS(LOWER_ID, UPPER_ID) &tuple_##LOWER_ID<true, false>,
 //#define DATA_VALUE_WITNESS(LOWER_ID, UPPER_ID, TYPE)
@@ -1411,7 +1430,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  ValueWitnessFlags(),
 //  0
 //};
-//static const ValueWitnessTable tuple_witnesses_nonpod_noninline = {
+// static const ValueWitnessTable tuple_witnesses_nonpod_noninline = {
 //#define WANT_ONLY_REQUIRED_VALUE_WITNESSES
 //#define VALUE_WITNESS(LOWER_ID, UPPER_ID) &tuple_##LOWER_ID<false, false>,
 //#define DATA_VALUE_WITNESS(LOWER_ID, UPPER_ID, TYPE)
@@ -1422,18 +1441,18 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  0
 //};
 //
-//static constexpr TypeLayout getInitialLayoutForValueType() {
+// static constexpr TypeLayout getInitialLayoutForValueType() {
 //  return {0, 0, ValueWitnessFlags().withAlignment(1).withPOD(true), 0};
 //}
 //
-//static constexpr TypeLayout getInitialLayoutForHeapObject() {
+// static constexpr TypeLayout getInitialLayoutForHeapObject() {
 //  return {sizeof(HeapObject),
 //          sizeof(HeapObject),
 //          ValueWitnessFlags().withAlignment(alignof(HeapObject)),
 //          0};
 //}
 //
-//static size_t roundUpToAlignMask(size_t size, size_t alignMask) {
+// static size_t roundUpToAlignMask(size_t size, size_t alignMask) {
 //  return (size + alignMask) & ~alignMask;
 //}
 //
@@ -1446,8 +1465,8 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 /////
 ///// SetOffsetFn should have signature:
 /////   void (size_t index, ElementType &type, size_t offset)
-//template<typename ElementType, typename GetLayoutFn, typename SetOffsetFn>
-//static void performBasicLayout(TypeLayout &layout,
+// template<typename ElementType, typename GetLayoutFn, typename SetOffsetFn>
+// static void performBasicLayout(TypeLayout &layout,
 //                               ElementType *elements,
 //                               size_t numElements,
 //                               GetLayoutFn &&getLayout,
@@ -1486,7 +1505,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //}
 //
 //
-//size_t swift::swift_getTupleTypeLayout2(TypeLayout *result,
+// size_t swift::swift_getTupleTypeLayout2(TypeLayout *result,
 //                                        const TypeLayout *elt0,
 //                                        const TypeLayout *elt1) {
 //  const TypeLayout *elts[] = { elt0, elt1 };
@@ -1497,7 +1516,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return offsets[1];
 //}
 //
-//OffsetPair swift::swift_getTupleTypeLayout3(TypeLayout *result,
+// OffsetPair swift::swift_getTupleTypeLayout3(TypeLayout *result,
 //                                            const TypeLayout *elt0,
 //                                            const TypeLayout *elt1,
 //                                            const TypeLayout *elt2) {
@@ -1509,7 +1528,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return {offsets[1], offsets[2]};
 //}
 //
-//void swift::swift_getTupleTypeLayout(TypeLayout *result,
+// void swift::swift_getTupleTypeLayout(TypeLayout *result,
 //                                     uint32_t *elementOffsets,
 //                                     TupleTypeFlags flags,
 //                                     const TypeLayout * const *elements) {
@@ -1533,12 +1552,13 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  }
 //}
 //
-//MetadataResponse
-//swift::swift_getTupleTypeMetadata(MetadataRequest request,
+// MetadataResponse
+// swift::swift_getTupleTypeMetadata(MetadataRequest request,
 //                                  TupleTypeFlags flags,
 //                                  const Metadata * const *elements,
 //                                  const char *labels,
-//                                  const ValueWitnessTable *proposedWitnesses) {
+//                                  const ValueWitnessTable *proposedWitnesses)
+//                                  {
 //  auto numElements = flags.getNumElements();
 //
 //  // Bypass the cache for the empty tuple. We might reasonably get called
@@ -1581,7 +1601,7 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return result;
 //}
 //
-//TupleCacheEntry::TupleCacheEntry(const Key &key, MetadataRequest request,
+// TupleCacheEntry::TupleCacheEntry(const Key &key, MetadataRequest request,
 //                                 const ValueWitnessTable *proposedWitnesses) {
 //  Data.setKind(MetadataKind::Tuple);
 //  Data.NumElements = key.NumElements;
@@ -1596,14 +1616,14 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  assert(TupleCacheStorage::resolveExistingEntry(&Data) == this);
 //}
 //
-//TupleCacheEntry::AllocationResult
-//TupleCacheEntry::allocate(const ValueWitnessTable *proposedWitnesses) {
+// TupleCacheEntry::AllocationResult
+// TupleCacheEntry::allocate(const ValueWitnessTable *proposedWitnesses) {
 //  // All the work we can reasonably do here was done in the constructor.
 //  return { &Data, PrivateMetadataState::Abstract };
 //}
 //
-//TupleCacheEntry::TryInitializeResult
-//TupleCacheEntry::tryInitialize(Metadata *metadata,
+// TupleCacheEntry::TryInitializeResult
+// TupleCacheEntry::tryInitialize(Metadata *metadata,
 //                               PrivateMetadataState state,
 //                               PrivateMetadataCompletionContext *context) {
 //  // If we've already reached non-transitive completeness, just check that.
@@ -1741,23 +1761,25 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 //  return checkTransitiveCompleteness();
 //}
 //
-//MetadataResponse
-//swift::swift_getTupleTypeMetadata2(MetadataRequest request,
+// MetadataResponse
+// swift::swift_getTupleTypeMetadata2(MetadataRequest request,
 //                                   const Metadata *elt0, const Metadata *elt1,
 //                                   const char *labels,
-//                                   const ValueWitnessTable *proposedWitnesses) {
+//                                   const ValueWitnessTable *proposedWitnesses)
+//                                   {
 //  const Metadata *elts[] = { elt0, elt1 };
 //  return swift_getTupleTypeMetadata(request,
 //                                    TupleTypeFlags().withNumElements(2),
 //                                    elts, labels, proposedWitnesses);
 //}
 //
-//MetadataResponse
-//swift::swift_getTupleTypeMetadata3(MetadataRequest request,
+// MetadataResponse
+// swift::swift_getTupleTypeMetadata3(MetadataRequest request,
 //                                   const Metadata *elt0, const Metadata *elt1,
 //                                   const Metadata *elt2,
 //                                   const char *labels,
-//                                   const ValueWitnessTable *proposedWitnesses) {
+//                                   const ValueWitnessTable *proposedWitnesses)
+//                                   {
 //  const Metadata *elts[] = { elt0, elt1, elt2 };
 //  return swift_getTupleTypeMetadata(request,
 //                                    TupleTypeFlags().withNumElements(3),
@@ -1769,39 +1791,42 @@ swift::swift_getObjCClassFromMetadataConditional(const Metadata *theMetadata) {
 /***************************************************************************/
 
 namespace {
-  /// A class encapsulating everything interesting about the identity of
-  /// a type context *except* the identity of the parent context.
-  class TypeContextIdentity {
-    StringRef Name;
-  public:
-    explicit TypeContextIdentity(const TypeContextDescriptor *type) {
-      Name = ParsedTypeIdentity::parse(type).FullIdentity;
-    }
+/// A class encapsulating everything interesting about the identity of
+/// a type context *except* the identity of the parent context.
+class TypeContextIdentity {
+  StringRef Name;
 
-    bool operator==(const TypeContextIdentity &other) const {
-      return Name == other.Name;
-    }
-    int compare(const TypeContextIdentity &other) const {
-      return Name.compare(other.Name);
-    }
-  };
-}
+public:
+  explicit TypeContextIdentity(const TypeContextDescriptor *type) {
+    Name = ParsedTypeIdentity::parse(type).FullIdentity;
+  }
+
+  bool operator==(const TypeContextIdentity &other) const {
+    return Name == other.Name;
+  }
+  int compare(const TypeContextIdentity &other) const {
+    return Name.compare(other.Name);
+  }
+};
+} // namespace
 
 bool swift::equalContexts(const ContextDescriptor *a,
-                          const ContextDescriptor *b)
-{
+                          const ContextDescriptor *b) {
   // Fast path: pointer equality.
-  if (a == b) return true;
+  if (a == b)
+    return true;
 
   // If either context is null, we're done.
   if (a == nullptr || b == nullptr)
     return false;
 
   // If either descriptor is known to be unique, we're done.
-  if (a->isUnique() || b->isUnique()) return false;
+  if (a->isUnique() || b->isUnique())
+    return false;
 
   // Do the kinds match?
-  if (a->getKind() != b->getKind()) return false;
+  if (a->getKind() != b->getKind())
+    return false;
 
   // Do the parents match?
   if (!equalContexts(a->Parent.get(), b->Parent.get()))
@@ -1823,8 +1848,8 @@ bool swift::equalContexts(const ContextDescriptor *a,
 
   default:
     // Types in the same context with the same name are equivalent.
-    if (kind >= ContextDescriptorKind::Type_First
-        && kind <= ContextDescriptorKind::Type_Last) {
+    if (kind >= ContextDescriptorKind::Type_First &&
+        kind <= ContextDescriptorKind::Type_Last) {
       auto typeA = cast<TypeContextDescriptor>(a);
       auto typeB = cast<TypeContextDescriptor>(b);
       return TypeContextIdentity(typeA) == TypeContextIdentity(typeB);
@@ -1844,7 +1869,7 @@ bool swift::equalContexts(const ContextDescriptor *a,
 //// The buffer operations assume that the value is stored indirectly, because
 //// installCommonValueWitnesses will install the direct equivalents instead.
 //
-//namespace {
+// namespace {
 //  template<typename T>
 //  struct pointer_function_cast_impl;
 //
@@ -1877,13 +1902,14 @@ bool swift::equalContexts(const ContextDescriptor *a,
 ///// function type that takes different pointer arguments and returns.
 ///// In any reasonable calling convention the input and output function types
 ///// should be ABI-compatible.
-//template<typename Out, typename In>
-//static constexpr Out pointer_function_cast(In *function) {
+// template<typename Out, typename In>
+// static constexpr Out pointer_function_cast(In *function) {
 //  return pointer_function_cast_impl<Out>::perform(function);
 //}
 //
-//static OpaqueValue *pod_indirect_initializeBufferWithCopyOfBuffer(
-//                    ValueBuffer *dest, ValueBuffer *src, const Metadata *self) {
+// static OpaqueValue *pod_indirect_initializeBufferWithCopyOfBuffer(
+//                    ValueBuffer *dest, ValueBuffer *src, const Metadata *self)
+//                    {
 //  auto wtable = self->getValueWitnesses();
 //  auto *srcReference = *reinterpret_cast<HeapObject**>(src);
 //  *reinterpret_cast<HeapObject**>(dest) = srcReference;
@@ -1897,28 +1923,30 @@ bool swift::equalContexts(const ContextDescriptor *a,
 //  return reinterpret_cast<OpaqueValue *>(bytePtr + byteOffset);
 //}
 //
-//static void pod_destroy(OpaqueValue *object, const Metadata *self) {}
+// static void pod_destroy(OpaqueValue *object, const Metadata *self) {}
 //
-//static OpaqueValue *pod_copy(OpaqueValue *dest, OpaqueValue *src,
+// static OpaqueValue *pod_copy(OpaqueValue *dest, OpaqueValue *src,
 //                             const Metadata *self) {
 //  memcpy(dest, src, self->getValueWitnesses()->size);
 //  return dest;
 //}
 //
-//static OpaqueValue *pod_direct_initializeBufferWithCopyOfBuffer(
-//                    ValueBuffer *dest, ValueBuffer *src, const Metadata *self) {
+// static OpaqueValue *pod_direct_initializeBufferWithCopyOfBuffer(
+//                    ValueBuffer *dest, ValueBuffer *src, const Metadata *self)
+//                    {
 //  return pod_copy(reinterpret_cast<OpaqueValue*>(dest),
 //                  reinterpret_cast<OpaqueValue*>(src),
 //                  self);
 //}
 //
-//static constexpr uint64_t sizeWithAlignmentMask(uint64_t size,
+// static constexpr uint64_t sizeWithAlignmentMask(uint64_t size,
 //                                                uint64_t alignmentMask,
-//                                                uint64_t hasExtraInhabitants) {
+//                                                uint64_t hasExtraInhabitants)
+//                                                {
 //  return (hasExtraInhabitants << 48) | (size << 16) | alignmentMask;
 //}
 //
-//void swift::installCommonValueWitnesses(const TypeLayout &layout,
+// void swift::installCommonValueWitnesses(const TypeLayout &layout,
 //                                        ValueWitnessTable *vwtable) {
 //  auto flags = layout.flags;
 //  if (flags.isPOD()) {
@@ -1992,7 +2020,7 @@ bool swift::equalContexts(const ContextDescriptor *a,
 ///*** Structs ***************************************************************/
 ///***************************************************************************/
 //
-//static ValueWitnessTable *getMutableVWTableForInit(StructMetadata *self,
+// static ValueWitnessTable *getMutableVWTableForInit(StructMetadata *self,
 //                                                   StructLayoutFlags flags) {
 //  auto oldTable = self->getValueWitnesses();
 //
@@ -2016,7 +2044,7 @@ bool swift::equalContexts(const ContextDescriptor *a,
 //
 ///// Initialize the value witness table and struct field offset vector for a
 ///// struct.
-//void swift::swift_initStructMetadata(StructMetadata *structType,
+// void swift::swift_initStructMetadata(StructMetadata *structType,
 //                                     StructLayoutFlags layoutFlags,
 //                                     size_t numFields,
 //                                     const TypeLayout *const *fieldTypes,
@@ -2028,9 +2056,9 @@ bool swift::equalContexts(const ContextDescriptor *a,
 //      assignUnlessEqual(fieldOffsets[i], offset);
 //    });
 //
-//  // We have extra inhabitants if any element does. Use the field with the most.
-//  unsigned extraInhabitantCount = 0;
-//  for (unsigned i = 0; i < numFields; ++i) {
+//  // We have extra inhabitants if any element does. Use the field with the
+//  most. unsigned extraInhabitantCount = 0; for (unsigned i = 0; i < numFields;
+//  ++i) {
 //    unsigned fieldExtraInhabitantCount =
 //      fieldTypes[i]->getNumExtraInhabitants();
 //    if (fieldExtraInhabitantCount > extraInhabitantCount) {
@@ -2058,9 +2086,10 @@ static MetadataAllocator &getResilientMetadataAllocator() {
   return allocator;
 }
 
-//ClassMetadata *
-//swift::swift_relocateClassMetadata(const ClassDescriptor *description,
-//                                   const ResilientClassMetadataPattern *pattern) {
+// ClassMetadata *
+// swift::swift_relocateClassMetadata(const ClassDescriptor *description,
+//                                   const ResilientClassMetadataPattern
+//                                   *pattern) {
 //  auto bounds = description->getMetadataBounds();
 //
 //  auto metadata = reinterpret_cast<ClassMetadata *>(
@@ -2141,7 +2170,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //  return metadata;
 //}
 //
-//namespace {
+// namespace {
 //  /// The structure of ObjC class ivars as emitted by compilers.
 //  struct ClassIvarEntry {
 //    size_t *Offset;
@@ -2183,7 +2212,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //} // end anonymous namespace
 //
 //#if SWIFT_OBJC_INTEROP
-//static uint32_t getLog2AlignmentFromMask(size_t alignMask) {
+// static uint32_t getLog2AlignmentFromMask(size_t alignMask) {
 //  assert(((alignMask + 1) & alignMask) == 0 &&
 //         "not an alignment mask!");
 //
@@ -2193,11 +2222,12 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //  return log2;
 //}
 //
-//static inline ClassROData *getROData(ClassMetadata *theClass) {
-//  return (ClassROData*)(theClass->Data & ~uintptr_t(SWIFT_CLASS_IS_SWIFT_MASK));
+// static inline ClassROData *getROData(ClassMetadata *theClass) {
+//  return (ClassROData*)(theClass->Data &
+//  ~uintptr_t(SWIFT_CLASS_IS_SWIFT_MASK));
 //}
 //
-//static void initGenericClassObjCName(ClassMetadata *theClass) {
+// static void initGenericClassObjCName(ClassMetadata *theClass) {
 //  // Use the remangler to generate a mangled name from the type metadata.
 //  Demangle::StackAllocatedDemangler<4096> Dem;
 //
@@ -2240,7 +2270,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //
 ///// Initialize the invariant superclass components of a class metadata,
 ///// such as the generic type arguments, field offsets, and so on.
-//static void copySuperclassMetadataToSubclass(ClassMetadata *theClass,
+// static void copySuperclassMetadataToSubclass(ClassMetadata *theClass,
 //                                             ClassLayoutFlags layoutFlags) {
 //  const ClassMetadata *theSuperclass = theClass->Superclass;
 //  if (theSuperclass == nullptr)
@@ -2304,7 +2334,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 ///// Using the information in the class context descriptor, fill in in the
 ///// immediate vtable entries for the class and install overrides of any
 ///// superclass vtable entries.
-//static void initClassVTable(ClassMetadata *self) {
+// static void initClassVTable(ClassMetadata *self) {
 //  const auto *description = self->getDescription();
 //  auto *classWords = reinterpret_cast<void **>(self);
 //
@@ -2345,7 +2375,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //  }
 //}
 //
-//static void initClassFieldOffsetVector(ClassMetadata *self,
+// static void initClassFieldOffsetVector(ClassMetadata *self,
 //                                       size_t numFields,
 //                                       const TypeLayout * const *fieldTypes,
 //                                       size_t *fieldOffsets) {
@@ -2428,13 +2458,14 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 ///// field offset globals. Does *not* register the class with the Objective-C
 ///// runtime; that must be done by the caller.
 /////
-///// This function copies the ivar descriptors and updates each ivar global with
+///// This function copies the ivar descriptors and updates each ivar global
+///with
 ///// the corresponding offset in \p fieldOffsets, before asking the Objective-C
 ///// runtime to realize the class. The Objective-C runtime will then slide the
 ///// offsets stored in those globals.
 /////
 ///// Note that \p fieldOffsets remains unchanged in this case.
-//static void initObjCClass(ClassMetadata *self,
+// static void initObjCClass(ClassMetadata *self,
 //                          size_t numFields,
 //                          const TypeLayout * const *fieldTypes,
 //                          size_t *fieldOffsets) {
@@ -2476,15 +2507,17 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //  }
 //}
 //
-///// Generic classes only. Initialize the Objective-C ivar descriptors and field
+///// Generic classes only. Initialize the Objective-C ivar descriptors and
+///field
 ///// offset globals and register the class with the runtime.
 /////
-///// This function copies the ivar descriptors and points each ivar offset at the
+///// This function copies the ivar descriptors and points each ivar offset at
+///the
 ///// corresponding entry in \p fieldOffsets, before asking the Objective-C
 ///// runtime to realize the class. The Objective-C runtime will then slide the
 ///// offsets in \p fieldOffsets.
-//static MetadataDependency
-//initGenericObjCClass(ClassMetadata *self, size_t numFields,
+// static MetadataDependency
+// initGenericObjCClass(ClassMetadata *self, size_t numFields,
 //                     const TypeLayout * const *fieldTypes,
 //                     size_t *fieldOffsets) {
 //  // If the class is generic, we need to give it a name for Objective-C.
@@ -2594,13 +2627,14 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //}
 //#endif
 //
-//SWIFT_CC(swift)
-//static std::pair<MetadataDependency, const ClassMetadata *>
-//getSuperclassMetadata(ClassMetadata *self, bool allowDependency) {
+// SWIFT_CC(swift)
+// static std::pair<MetadataDependency, const ClassMetadata *>
+// getSuperclassMetadata(ClassMetadata *self, bool allowDependency) {
 //  // If there is a mangled superclass name, demangle it to the superclass
 //  // type.
 //  const ClassMetadata *super = nullptr;
-//  if (auto superclassNameBase = self->getDescription()->SuperclassType.get()) {
+//  if (auto superclassNameBase = self->getDescription()->SuperclassType.get())
+//  {
 //    StringRef superclassName =
 //      Demangle::makeSymbolicMangledNameStringRef(superclassNameBase);
 //    SubstGenericParametersFromMetadata substitutions(self);
@@ -2620,8 +2654,8 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //    auto superclass = response.Value;
 //    if (!superclass) {
 //      fatalError(0,
-//                 "failed to demangle superclass of %s from mangled name '%s'\n",
-//                 self->getDescription()->Name.get(),
+//                 "failed to demangle superclass of %s from mangled name
+//                 '%s'\n", self->getDescription()->Name.get(),
 //                 superclassName.str().c_str());
 //    }
 //
@@ -2644,11 +2678,12 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //}
 //
 //// Suppress diagnostic about the availability of _objc_realizeClassFromSwift.
-//// We test availability with a nullptr check, but the compiler doesn't see that.
+//// We test availability with a nullptr check, but the compiler doesn't see
+///that.
 //#pragma clang diagnostic push
 //#pragma clang diagnostic ignored "-Wunguarded-availability-new"
 //
-//static SWIFT_CC(swift) MetadataDependency
+// static SWIFT_CC(swift) MetadataDependency
 //_swift_initClassMetadataImpl(ClassMetadata *self,
 //                             ClassLayoutFlags layoutFlags,
 //                             size_t numFields,
@@ -2739,7 +2774,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //
 //#pragma clang diagnostic pop
 //
-//void swift::swift_initClassMetadata(ClassMetadata *self,
+// void swift::swift_initClassMetadata(ClassMetadata *self,
 //                                    ClassLayoutFlags layoutFlags,
 //                                    size_t numFields,
 //                                    const TypeLayout * const *fieldTypes,
@@ -2749,8 +2784,8 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //                                      /*allowDependency*/ false);
 //}
 //
-//MetadataDependency
-//swift::swift_initClassMetadata2(ClassMetadata *self,
+// MetadataDependency
+// swift::swift_initClassMetadata2(ClassMetadata *self,
 //                                ClassLayoutFlags layoutFlags,
 //                                size_t numFields,
 //                                const TypeLayout * const *fieldTypes,
@@ -2763,12 +2798,13 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //#if SWIFT_OBJC_INTEROP
 //
 //// Suppress diagnostic about the availability of _objc_realizeClassFromSwift.
-//// We test availability with a nullptr check, but the compiler doesn't see that.
+//// We test availability with a nullptr check, but the compiler doesn't see
+///that.
 //#pragma clang diagnostic push
 //#pragma clang diagnostic ignored "-Wunguarded-availability-new"
 //
 //
-//static SWIFT_CC(swift) MetadataDependency
+// static SWIFT_CC(swift) MetadataDependency
 //_swift_updateClassMetadataImpl(ClassMetadata *self,
 //                               ClassLayoutFlags layoutFlags,
 //                               size_t numFields,
@@ -2818,13 +2854,16 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //    // Objective-C interop mode, we don't actually use the field offset vector
 //    // of non-generic classes.
 //    //
-//    // In particular, class mirrors always use the Objective-C ivar descriptors,
+//    // In particular, class mirrors always use the Objective-C ivar
+//    descriptors,
 //    // which point at field offset globals and not the field offset vector.
 //    swift_getInitializedObjCClass((Class)self);
 //  } else {
-//    // Update the field offset vector using runtime type information; the layout
-//    // of resilient types might be different than the statically-emitted layout.
-//    initClassFieldOffsetVector(self, numFields, fieldTypes, fieldOffsets);
+//    // Update the field offset vector using runtime type information; the
+//    layout
+//    // of resilient types might be different than the statically-emitted
+//    layout. initClassFieldOffsetVector(self, numFields, fieldTypes,
+//    fieldOffsets);
 //
 //    // Copy field offset vector entries to the field offset globals.
 //    initObjCClass(self, numFields, fieldTypes, fieldOffsets);
@@ -2836,7 +2875,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //  return MetadataDependency();
 //}
 //
-//void swift::swift_updateClassMetadata(ClassMetadata *self,
+// void swift::swift_updateClassMetadata(ClassMetadata *self,
 //                                      ClassLayoutFlags layoutFlags,
 //                                      size_t numFields,
 //                                      const TypeLayout * const *fieldTypes,
@@ -2846,8 +2885,8 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //                                        /*allowDependency*/ false);
 //}
 //
-//MetadataDependency
-//swift::swift_updateClassMetadata2(ClassMetadata *self,
+// MetadataDependency
+// swift::swift_updateClassMetadata2(ClassMetadata *self,
 //                                  ClassLayoutFlags layoutFlags,
 //                                  size_t numFields,
 //                                  const TypeLayout * const *fieldTypes,
@@ -2861,7 +2900,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //#endif
 //
 //#ifndef NDEBUG
-//static bool isAncestorOf(const ClassMetadata *metadata,
+// static bool isAncestorOf(const ClassMetadata *metadata,
 //                         const ClassDescriptor *description) {
 //  auto ancestor = metadata;
 //  while (ancestor && ancestor->isTypeMetadata()) {
@@ -2873,8 +2912,8 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //}
 //#endif
 //
-//void *
-//swift::swift_lookUpClassMethod(const ClassMetadata *metadata,
+// void *
+// swift::swift_lookUpClassMethod(const ClassMetadata *metadata,
 //                               const MethodDescriptor *method,
 //                               const ClassDescriptor *description) {
 //  assert(metadata->isTypeMetadata());
@@ -2899,14 +2938,14 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 ///***************************************************************************/
 //
 ///// Find the appropriate value witness table for the given type.
-//static const ValueWitnessTable *
-//getMetatypeValueWitnesses(const Metadata *instanceType) {
+// static const ValueWitnessTable *
+// getMetatypeValueWitnesses(const Metadata *instanceType) {
 //  // When metatypes are accessed opaquely, they always have a "thick"
 //  // representation.
 //  return &getUnmanagedPointerPointerValueWitnesses();
 //}
 //
-//namespace {
+// namespace {
 //  class MetatypeCacheEntry {
 //  public:
 //    FullMetadata<MetatypeMetadata> Data;
@@ -2935,12 +2974,12 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //} // end anonymous namespace
 //
 ///// The uniquing structure for metatype type metadata.
-//static SimpleGlobalCache<MetatypeCacheEntry> MetatypeTypes;
+// static SimpleGlobalCache<MetatypeCacheEntry> MetatypeTypes;
 //
 ///// Fetch a uniqued metadata for a metatype type.
-//SWIFT_RUNTIME_EXPORT
-//const MetatypeMetadata *
-//swift::swift_getMetatypeMetadata(const Metadata *instanceMetadata) {
+// SWIFT_RUNTIME_EXPORT
+// const MetatypeMetadata *
+// swift::swift_getMetatypeMetadata(const Metadata *instanceMetadata) {
 //  return &MetatypeTypes.getOrInsert(instanceMetadata).first->Data;
 //}
 //
@@ -2948,11 +2987,11 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 ///*** Existential Metatypes *************************************************/
 ///***************************************************************************/
 //
-//namespace {
+// namespace {
 //
 ///// A cache entry for existential metatype witness tables.
-//class ExistentialMetatypeValueWitnessTableCacheEntry {
-//public:
+// class ExistentialMetatypeValueWitnessTableCacheEntry {
+// public:
 //  ValueWitnessTable Data;
 //
 //  unsigned getNumWitnessTables() const {
@@ -2978,8 +3017,8 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //  }
 //};
 //
-//class ExistentialMetatypeCacheEntry {
-//public:
+// class ExistentialMetatypeCacheEntry {
+// public:
 //  FullMetadata<ExistentialMetatypeMetadata> Data;
 //
 //  ExistentialMetatypeCacheEntry(const Metadata *instanceMetadata);
@@ -3003,23 +3042,23 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //} // end anonymous namespace
 //
 ///// The uniquing structure for existential metatype value witness tables.
-//static SimpleGlobalCache<ExistentialMetatypeValueWitnessTableCacheEntry>
-//ExistentialMetatypeValueWitnessTables;
+// static SimpleGlobalCache<ExistentialMetatypeValueWitnessTableCacheEntry>
+// ExistentialMetatypeValueWitnessTables;
 //
 ///// The uniquing structure for existential metatype type metadata.
-//static SimpleGlobalCache<ExistentialMetatypeCacheEntry> ExistentialMetatypes;
+// static SimpleGlobalCache<ExistentialMetatypeCacheEntry> ExistentialMetatypes;
 //
-//static const ValueWitnessTable
-//ExistentialMetatypeValueWitnesses_1 =
+// static const ValueWitnessTable
+// ExistentialMetatypeValueWitnesses_1 =
 //  ValueWitnessTableForBox<ExistentialMetatypeBox<1>>::table;
-//static const ValueWitnessTable
-//ExistentialMetatypeValueWitnesses_2 =
+// static const ValueWitnessTable
+// ExistentialMetatypeValueWitnesses_2 =
 //  ValueWitnessTableForBox<ExistentialMetatypeBox<2>>::table;
 //
 ///// Instantiate a value witness table for an existential metatype
 ///// container with the given number of witness table pointers.
-//static const ValueWitnessTable *
-//getExistentialMetatypeValueWitnesses(unsigned numWitnessTables) {
+// static const ValueWitnessTable *
+// getExistentialMetatypeValueWitnesses(unsigned numWitnessTables) {
 //  if (numWitnessTables == 0)
 //    return &getUnmanagedPointerPointerValueWitnesses();
 //  if (numWitnessTables == 1)
@@ -3028,14 +3067,15 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //    return &ExistentialMetatypeValueWitnesses_2;
 //
 //  static_assert(3 * sizeof(void*) >= sizeof(ValueBuffer),
-//                "not handling all possible inline-storage class existentials!");
+//                "not handling all possible inline-storage class
+//                existentials!");
 //
 //  return &ExistentialMetatypeValueWitnessTables.getOrInsert(numWitnessTables)
 //                                               .first->Data;
 //}
 //
-//ExistentialMetatypeValueWitnessTableCacheEntry::
-//ExistentialMetatypeValueWitnessTableCacheEntry(unsigned numWitnessTables) {
+// ExistentialMetatypeValueWitnessTableCacheEntry::
+// ExistentialMetatypeValueWitnessTableCacheEntry(unsigned numWitnessTables) {
 //  using Box = NonFixedExistentialMetatypeBox;
 //  using Witnesses = NonFixedValueWitnesses<Box, /*known allocated*/ true>;
 //
@@ -3060,14 +3100,16 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //}
 //
 ///// Fetch a uniqued metadata for a metatype type.
-//SWIFT_RUNTIME_EXPORT
-//const ExistentialMetatypeMetadata *
-//swift::swift_getExistentialMetatypeMetadata(const Metadata *instanceMetadata) {
+// SWIFT_RUNTIME_EXPORT
+// const ExistentialMetatypeMetadata *
+// swift::swift_getExistentialMetatypeMetadata(const Metadata *instanceMetadata)
+// {
 //  return &ExistentialMetatypes.getOrInsert(instanceMetadata).first->Data;
 //}
 //
-//ExistentialMetatypeCacheEntry::ExistentialMetatypeCacheEntry(
-//                                            const Metadata *instanceMetadata) {
+// ExistentialMetatypeCacheEntry::ExistentialMetatypeCacheEntry(
+//                                            const Metadata *instanceMetadata)
+//                                            {
 //  ExistentialTypeFlags flags;
 //  if (instanceMetadata->getKind() == MetadataKind::Existential) {
 //    flags = static_cast<const ExistentialTypeMetadata*>(instanceMetadata)
@@ -3104,9 +3146,7 @@ public:
 
   ExistentialCacheEntry(Key key);
 
-  intptr_t getKeyIntValueForDump() {
-    return 0;
-  }
+  intptr_t getKeyIntValueForDump() { return 0; }
 
   int compareWithKey(Key key) const {
     if (auto result = compareIntegers(key.ClassConstraint,
@@ -3117,8 +3157,7 @@ public:
                                       Data.getSuperclassConstraint()))
       return result;
 
-    if (auto result = compareIntegers(key.NumProtocols,
-                                      Data.NumProtocols))
+    if (auto result = compareIntegers(key.NumProtocols, Data.NumProtocols))
       return result;
 
     auto dataProtocols = Data.getProtocols();
@@ -3133,14 +3172,14 @@ public:
 
   static size_t getExtraAllocationSize(Key key) {
     return ExistentialTypeMetadata::additionalSizeToAlloc<
-             const Metadata *, ProtocolDescriptorRef
-           >(key.SuperclassConstraint != nullptr, key.NumProtocols);
+        const Metadata *, ProtocolDescriptorRef>(
+        key.SuperclassConstraint != nullptr, key.NumProtocols);
   }
 
   size_t getExtraAllocationSize() const {
     return ExistentialTypeMetadata::additionalSizeToAlloc<
-             const Metadata *, ProtocolDescriptorRef
-           >(Data.Flags.hasSuperclassConstraint(), Data.NumProtocols);
+        const Metadata *, ProtocolDescriptorRef>(
+        Data.Flags.hasSuperclassConstraint(), Data.NumProtocols);
   }
 };
 
@@ -3151,24 +3190,18 @@ public:
   OpaqueExistentialValueWitnessTableCacheEntry(unsigned numTables);
 
   unsigned getNumWitnessTables() const {
-    return (Data.size - sizeof(OpaqueExistentialContainer))
-              / sizeof(const WitnessTable *);
+    return (Data.size - sizeof(OpaqueExistentialContainer)) /
+           sizeof(const WitnessTable *);
   }
 
-  intptr_t getKeyIntValueForDump() {
-    return getNumWitnessTables();
-  }
+  intptr_t getKeyIntValueForDump() { return getNumWitnessTables(); }
 
   int compareWithKey(unsigned key) const {
     return compareIntegers(key, getNumWitnessTables());
   }
 
-  static size_t getExtraAllocationSize(unsigned numTables) {
-    return 0;
-  }
-  size_t getExtraAllocationSize() const {
-    return 0;
-  }
+  static size_t getExtraAllocationSize(unsigned numTables) { return 0; }
+  size_t getExtraAllocationSize() const { return 0; }
 };
 
 class ClassExistentialValueWitnessTableCacheEntry {
@@ -3178,24 +3211,18 @@ public:
   ClassExistentialValueWitnessTableCacheEntry(unsigned numTables);
 
   unsigned getNumWitnessTables() const {
-    return (Data.size - sizeof(ClassExistentialContainer))
-              / sizeof(const WitnessTable *);
+    return (Data.size - sizeof(ClassExistentialContainer)) /
+           sizeof(const WitnessTable *);
   }
 
-  intptr_t getKeyIntValueForDump() {
-    return getNumWitnessTables();
-  }
+  intptr_t getKeyIntValueForDump() { return getNumWitnessTables(); }
 
   int compareWithKey(unsigned key) const {
     return compareIntegers(key, getNumWitnessTables());
   }
 
-  static size_t getExtraAllocationSize(unsigned numTables) {
-    return 0;
-  }
-  size_t getExtraAllocationSize() const {
-    return 0;
-  }
+  static size_t getExtraAllocationSize(unsigned numTables) { return 0; }
+  size_t getExtraAllocationSize() const { return 0; }
 };
 
 } // end anonymous namespace
@@ -3203,16 +3230,14 @@ public:
 /// The uniquing structure for existential type metadata.
 static SimpleGlobalCache<ExistentialCacheEntry> ExistentialTypes;
 
-static const ValueWitnessTable
-OpaqueExistentialValueWitnesses_0 =
-  ValueWitnessTableForBox<OpaqueExistentialBox<0>>::table;
-static const ValueWitnessTable
-OpaqueExistentialValueWitnesses_1 =
-  ValueWitnessTableForBox<OpaqueExistentialBox<1>>::table;
+static const ValueWitnessTable OpaqueExistentialValueWitnesses_0 =
+    ValueWitnessTableForBox<OpaqueExistentialBox<0>>::table;
+static const ValueWitnessTable OpaqueExistentialValueWitnesses_1 =
+    ValueWitnessTableForBox<OpaqueExistentialBox<1>>::table;
 
 ///// The standard metadata for Any.
-//const FullMetadata<ExistentialTypeMetadata> swift::
-//METADATA_SYM(ANY_MANGLING) = {
+// const FullMetadata<ExistentialTypeMetadata> swift::
+// METADATA_SYM(ANY_MANGLING) = {
 //  { &OpaqueExistentialValueWitnesses_0 }, // ValueWitnesses
 //  ExistentialTypeMetadata(
 //    ExistentialTypeFlags() // Flags
@@ -3223,8 +3248,8 @@ OpaqueExistentialValueWitnesses_1 =
 //};
 //
 ///// The standard metadata for AnyObject.
-//const FullMetadata<ExistentialTypeMetadata> swift::
-//METADATA_SYM(ANYOBJECT_MANGLING) = {
+// const FullMetadata<ExistentialTypeMetadata> swift::
+// METADATA_SYM(ANYOBJECT_MANGLING) = {
 //  {
 //#if SWIFT_OBJC_INTEROP
 //    &VALUE_WITNESS_SYM(BO)
@@ -3242,7 +3267,7 @@ OpaqueExistentialValueWitnesses_1 =
 
 /// The uniquing structure for opaque existential value witness tables.
 static SimpleGlobalCache<OpaqueExistentialValueWitnessTableCacheEntry>
-OpaqueExistentialValueWitnessTables;
+    OpaqueExistentialValueWitnessTables;
 
 /// Instantiate a value witness table for an opaque existential container with
 /// the given number of witness table pointers.
@@ -3255,26 +3280,26 @@ getOpaqueExistentialValueWitnesses(unsigned numWitnessTables) {
     return &OpaqueExistentialValueWitnesses_1;
 
   return &OpaqueExistentialValueWitnessTables.getOrInsert(numWitnessTables)
-                                             .first->Data;
+              .first->Data;
 }
 
 OpaqueExistentialValueWitnessTableCacheEntry::
-OpaqueExistentialValueWitnessTableCacheEntry(unsigned numWitnessTables) {
+    OpaqueExistentialValueWitnessTableCacheEntry(unsigned numWitnessTables) {
   using Box = NonFixedOpaqueExistentialBox;
   using Witnesses = NonFixedValueWitnesses<Box, /*known allocated*/ true>;
 
 #define WANT_ONLY_REQUIRED_VALUE_WITNESSES
-#define VALUE_WITNESS(LOWER_ID, UPPER_ID) \
-  Data.LOWER_ID = Witnesses::LOWER_ID;
+#define VALUE_WITNESS(LOWER_ID, UPPER_ID) Data.LOWER_ID = Witnesses::LOWER_ID;
 #define DATA_VALUE_WITNESS(LOWER_ID, UPPER_ID, TYPE)
 #include "swift/ABI/ValueWitness.def"
 
   Data.size = Box::Container::getSize(numWitnessTables);
-  Data.flags = ValueWitnessFlags()
-    .withAlignment(Box::Container::getAlignment(numWitnessTables))
-    .withPOD(false)
-    .withBitwiseTakable(true)
-    .withInlineStorage(false);
+  Data.flags =
+      ValueWitnessFlags()
+          .withAlignment(Box::Container::getAlignment(numWitnessTables))
+          .withPOD(false)
+          .withBitwiseTakable(true)
+          .withInlineStorage(false);
   Data.extraInhabitantCount = Witnesses::numExtraInhabitants;
   Data.stride = Box::Container::getStride(numWitnessTables);
 
@@ -3282,13 +3307,13 @@ OpaqueExistentialValueWitnessTableCacheEntry(unsigned numWitnessTables) {
 }
 
 static const ValueWitnessTable ClassExistentialValueWitnesses_1 =
-  ValueWitnessTableForBox<ClassExistentialBox<1>>::table;
+    ValueWitnessTableForBox<ClassExistentialBox<1>>::table;
 static const ValueWitnessTable ClassExistentialValueWitnesses_2 =
-  ValueWitnessTableForBox<ClassExistentialBox<2>>::table;
+    ValueWitnessTableForBox<ClassExistentialBox<2>>::table;
 
 /// The uniquing structure for class existential value witness tables.
 static SimpleGlobalCache<ClassExistentialValueWitnessTableCacheEntry>
-ClassExistentialValueWitnessTables;
+    ClassExistentialValueWitnessTables;
 
 /// Instantiate a value witness table for a class-constrained existential
 /// container with the given number of witness table pointers.
@@ -3308,32 +3333,32 @@ getClassExistentialValueWitnesses(const Metadata *superclass,
   if (numWitnessTables == 2)
     return &ClassExistentialValueWitnesses_2;
 
-  static_assert(3 * sizeof(void*) >= sizeof(ValueBuffer),
+  static_assert(3 * sizeof(void *) >= sizeof(ValueBuffer),
                 "not handling all possible inline-storage class existentials!");
 
   return &ClassExistentialValueWitnessTables.getOrInsert(numWitnessTables)
-                                            .first->Data;
+              .first->Data;
 }
 
 ClassExistentialValueWitnessTableCacheEntry::
-ClassExistentialValueWitnessTableCacheEntry(unsigned numWitnessTables) {
+    ClassExistentialValueWitnessTableCacheEntry(unsigned numWitnessTables) {
   using Box = NonFixedClassExistentialBox;
   using Witnesses = NonFixedValueWitnesses<Box, /*known allocated*/ true>;
 
 #define WANT_REQUIRED_VALUE_WITNESSES 1
 #define WANT_EXTRA_INHABITANT_VALUE_WITNESSES 1
 #define WANT_ENUM_VALUE_WITNESSES 0
-#define VALUE_WITNESS(LOWER_ID, UPPER_ID) \
-  Data.LOWER_ID = Witnesses::LOWER_ID;
+#define VALUE_WITNESS(LOWER_ID, UPPER_ID) Data.LOWER_ID = Witnesses::LOWER_ID;
 #define DATA_VALUE_WITNESS(LOWER_ID, UPPER_ID, TYPE)
 #include "swift/ABI/ValueWitness.def"
 
   Data.size = Box::Container::getSize(numWitnessTables);
-  Data.flags = ValueWitnessFlags()
-    .withAlignment(Box::Container::getAlignment(numWitnessTables))
-    .withPOD(false)
-    .withBitwiseTakable(true)
-    .withInlineStorage(false);
+  Data.flags =
+      ValueWitnessFlags()
+          .withAlignment(Box::Container::getAlignment(numWitnessTables))
+          .withPOD(false)
+          .withBitwiseTakable(true)
+          .withInlineStorage(false);
   Data.extraInhabitantCount = Witnesses::numExtraInhabitants;
   Data.stride = Box::Container::getStride(numWitnessTables);
 
@@ -3375,8 +3400,8 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
   swift_runtime_unreachable("Unhandled ProtocolClassConstraint in switch.");
 }
 
-//template<> ExistentialTypeRepresentation
-//ExistentialTypeMetadata::getRepresentation() const {
+// template<> ExistentialTypeRepresentation
+// ExistentialTypeMetadata::getRepresentation() const {
 //  // Some existentials use special containers.
 //  switch (Flags.getSpecialProtocol()) {
 //  case SpecialProtocol::Error:
@@ -3391,8 +3416,8 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
 //  return ExistentialTypeRepresentation::Opaque;
 //}
 //
-//template<> bool
-//ExistentialTypeMetadata::mayTakeValue(const OpaqueValue *container) const {
+// template<> bool
+// ExistentialTypeMetadata::mayTakeValue(const OpaqueValue *container) const {
 //  switch (getRepresentation()) {
 //  // Owning a reference to a class existential is equivalent to owning a
 //  // reference to the contained class instance.
@@ -3400,14 +3425,15 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
 //    return true;
 //  // Opaque existential containers uniquely own their contained value.
 //  case ExistentialTypeRepresentation::Opaque: {
-//    // We can't take from a shared existential box without checking uniqueness.
-//    auto *opaque =
+//    // We can't take from a shared existential box without checking
+//    uniqueness. auto *opaque =
 //        reinterpret_cast<const OpaqueExistentialContainer *>(container);
 //    return opaque->isValueInline();
 //  }
 //  // References to boxed existential containers may be shared.
 //  case ExistentialTypeRepresentation::Error: {
-//    // We can only take the value if the box is a bridged NSError, in which case
+//    // We can only take the value if the box is a bridged NSError, in which
+//    case
 //    // owning a reference to the box is owning a reference to the NSError.
 //    // TODO: Or if the box is uniquely referenced. We don't have intimate
 //    // enough knowledge of CF refcounting to check for that dynamically yet.
@@ -3421,9 +3447,9 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
 //      "Unhandled ExistentialTypeRepresentation in switch.");
 //}
 //
-//template<> void
-//ExistentialTypeMetadata::deinitExistentialContainer(OpaqueValue *container)
-//const {
+// template<> void
+// ExistentialTypeMetadata::deinitExistentialContainer(OpaqueValue *container)
+// const {
 //  switch (getRepresentation()) {
 //  case ExistentialTypeRepresentation::Class:
 //    // Nothing to clean up after taking the class reference.
@@ -3442,8 +3468,8 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
 //  }
 //}
 //
-//template<> const OpaqueValue *
-//ExistentialTypeMetadata::projectValue(const OpaqueValue *container) const {
+// template<> const OpaqueValue *
+// ExistentialTypeMetadata::projectValue(const OpaqueValue *container) const {
 //  switch (getRepresentation()) {
 //  case ExistentialTypeRepresentation::Class: {
 //    auto classContainer =
@@ -3470,8 +3496,8 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
 //      "Unhandled ExistentialTypeRepresentation in switch.");
 //}
 //
-//template<> const Metadata *
-//ExistentialTypeMetadata::getDynamicType(const OpaqueValue *container) const {
+// template<> const Metadata *
+// ExistentialTypeMetadata::getDynamicType(const OpaqueValue *container) const {
 //  switch (getRepresentation()) {
 //  case ExistentialTypeRepresentation::Class: {
 //    auto classContainer =
@@ -3495,8 +3521,8 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
 //      "Unhandled ExistentialTypeRepresentation in switch.");
 //}
 //
-//template<> const WitnessTable *
-//ExistentialTypeMetadata::getWitnessTable(const OpaqueValue *container,
+// template<> const WitnessTable *
+// ExistentialTypeMetadata::getWitnessTable(const OpaqueValue *container,
 //                                         unsigned i) const {
 //  assert(i < Flags.getNumWitnessTables());
 //
@@ -3535,9 +3561,8 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
 
 #ifndef NDEBUG
 /// Determine whether any of the given protocols is class-bound.
-static bool anyProtocolIsClassBound(
-                                size_t numProtocols,
-                                const ProtocolDescriptorRef *protocols) {
+static bool anyProtocolIsClassBound(size_t numProtocols,
+                                    const ProtocolDescriptorRef *protocols) {
   for (unsigned i = 0; i != numProtocols; ++i) {
     if (protocols[i].getClassConstraint() == ProtocolClassConstraint::Class)
       return true;
@@ -3551,21 +3576,18 @@ const Metadata *
 swift::_getSimpleProtocolTypeMetadata(const ProtocolDescriptor *protocol) {
   auto protocolRef = ProtocolDescriptorRef::forSwift(protocol);
   auto constraint =
-    protocol->getProtocolContextDescriptorFlags().getClassConstraint();
+      protocol->getProtocolContextDescriptorFlags().getClassConstraint();
   return swift_getExistentialTypeMetadata(constraint,
                                           /*superclass bound*/ nullptr,
-                                          /*num protocols*/ 1,
-                                          &protocolRef);
+                                          /*num protocols*/ 1, &protocolRef);
 }
 
 /// Fetch a uniqued metadata for an existential type. The array
 /// referenced by \c protocols will be sorted in-place.
-const ExistentialTypeMetadata *
-swift::swift_getExistentialTypeMetadata(
-                                  ProtocolClassConstraint classConstraint,
-                                  const Metadata *superclassConstraint,
-                                  size_t numProtocols,
-                                  const ProtocolDescriptorRef *protocols) {
+const ExistentialTypeMetadata *swift::swift_getExistentialTypeMetadata(
+    ProtocolClassConstraint classConstraint,
+    const Metadata *superclassConstraint, size_t numProtocols,
+    const ProtocolDescriptorRef *protocols) {
 
   // The empty compositions Any and AnyObject have fixed metadata.
   if (numProtocols == 0 && !superclassConstraint) {
@@ -3586,9 +3608,8 @@ swift::swift_getExistentialTypeMetadata(
   assert(classConstraint == ProtocolClassConstraint::Class ||
          (!superclassConstraint &&
           !anyProtocolIsClassBound(numProtocols, protocols)));
-  ExistentialCacheEntry::Key key = {
-    superclassConstraint, classConstraint, (uint32_t)numProtocols, protocols
-  };
+  ExistentialCacheEntry::Key key = {superclassConstraint, classConstraint,
+                                    (uint32_t)numProtocols, protocols};
   return &ExistentialTypes.getOrInsert(key).first->Data;
 }
 
@@ -3608,14 +3629,12 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
     special = key.Protocols[0].getSpecialProtocol();
 
   Data.setKind(MetadataKind::Existential);
-  Data.ValueWitnesses = getExistentialValueWitnesses(key.ClassConstraint,
-                                                     key.SuperclassConstraint,
-                                                     numWitnessTables,
-                                                     special);
+  Data.ValueWitnesses = getExistentialValueWitnesses(
+      key.ClassConstraint, key.SuperclassConstraint, numWitnessTables, special);
   Data.Flags = ExistentialTypeFlags()
-    .withNumWitnessTables(numWitnessTables)
-    .withClassConstraint(key.ClassConstraint)
-    .withSpecialProtocol(special);
+                   .withNumWitnessTables(numWitnessTables)
+                   .withClassConstraint(key.ClassConstraint)
+                   .withSpecialProtocol(special);
 
   if (key.SuperclassConstraint != nullptr) {
     Data.Flags = Data.Flags.withHasSuperclass(true);
@@ -3632,7 +3651,7 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 ///// Perform a copy-assignment from one existential container to another.
 ///// Both containers must be of the same existential type representable with no
 ///// witness tables.
-//OpaqueValue *swift::swift_assignExistentialWithCopy0(OpaqueValue *dest,
+// OpaqueValue *swift::swift_assignExistentialWithCopy0(OpaqueValue *dest,
 //                                                     const OpaqueValue *src,
 //                                                     const Metadata *type) {
 //  using Witnesses = ValueWitnesses<OpaqueExistentialBox<0>>;
@@ -3640,9 +3659,10 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //}
 //
 ///// Perform a copy-assignment from one existential container to another.
-///// Both containers must be of the same existential type representable with one
+///// Both containers must be of the same existential type representable with
+///one
 ///// witness table.
-//OpaqueValue *swift::swift_assignExistentialWithCopy1(OpaqueValue *dest,
+// OpaqueValue *swift::swift_assignExistentialWithCopy1(OpaqueValue *dest,
 //                                                     const OpaqueValue *src,
 //                                                     const Metadata *type) {
 //  using Witnesses = ValueWitnesses<OpaqueExistentialBox<1>>;
@@ -3650,9 +3670,10 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //}
 //
 ///// Perform a copy-assignment from one existential container to another.
-///// Both containers must be of the same existential type representable with the
+///// Both containers must be of the same existential type representable with
+///the
 ///// same number of witness tables.
-//OpaqueValue *swift::swift_assignExistentialWithCopy(OpaqueValue *dest,
+// OpaqueValue *swift::swift_assignExistentialWithCopy(OpaqueValue *dest,
 //                                                    const OpaqueValue *src,
 //                                                    const Metadata *type) {
 //  assert(!type->getValueWitnesses()->isValueInline());
@@ -3667,17 +3688,18 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 //// We use a DenseMap over what are essentially StringRefs instead of a
 //// StringMap because we don't need to actually copy the string.
-//namespace {
+// namespace {
 //
-//static const TypeContextDescriptor *
-//getForeignTypeDescription(Metadata *metadata) {
+// static const TypeContextDescriptor *
+// getForeignTypeDescription(Metadata *metadata) {
 //  if (auto foreignClass = dyn_cast<ForeignClassMetadata>(metadata))
 //    return foreignClass->getDescription();
 //  return cast<ValueMetadata>(metadata)->getDescription();
 //}
 //
-//class ForeignMetadataCacheEntry
-//  : public MetadataCacheEntryBase<ForeignMetadataCacheEntry, /*spurious*/ int> {
+// class ForeignMetadataCacheEntry
+//  : public MetadataCacheEntryBase<ForeignMetadataCacheEntry, /*spurious*/ int>
+//  {
 //
 //  Metadata *Value;
 //
@@ -3689,7 +3711,7 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //    swift_runtime_unreachable("should never be called");
 //  }
 //
-//public:
+// public:
 //  static const char *getName() { return "ForeignMetadataCache"; }
 //
 //  template <class... Args>
@@ -3711,7 +3733,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //    } else {
 //      if (candidate->getValueWitnesses() == nullptr) {
 //        assert(isa<ForeignClassMetadata>(candidate) &&
-//               "cannot set default value witnesses for non-class foreign types");
+//               "cannot set default value witnesses for non-class foreign
+//               types");
 //        // Fill in the default VWT if it was not set in the candidate at build
 //        // time.
 //#if SWIFT_OBJC_INTEROP
@@ -3751,7 +3774,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 //  AllocationResult allocate(Metadata *candidate) {
 //    swift_runtime_unreachable(
-//                        "always flags allocation complete during construction");
+//                        "always flags allocation complete during
+//                        construction");
 //  }
 //
 //  TryInitializeResult tryInitialize(Metadata *metadata,
@@ -3785,17 +3809,17 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 //} // end anonymous namespace
 //
-//static Lazy<MetadataCache<ForeignMetadataCacheEntry, false>> ForeignMetadata;
+// static Lazy<MetadataCache<ForeignMetadataCacheEntry, false>> ForeignMetadata;
 //
-//MetadataResponse
-//swift::swift_getForeignTypeMetadata(MetadataRequest request,
+// MetadataResponse
+// swift::swift_getForeignTypeMetadata(MetadataRequest request,
 //                                    ForeignTypeMetadata *candidate) {
 //  auto description = getForeignTypeDescription(candidate);
 //  return ForeignMetadata->getOrInsert(description, request, candidate).second;
 //}
 //
 ///// Unique-ing of foreign types' witness tables.
-//namespace {
+// namespace {
 //  class ForeignWitnessTableCacheEntry {
 //  public:
 //    struct Key {
@@ -3818,7 +3842,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //      if (auto r = comparePointers(other.protocol, key.protocol))
 //        return r;
 //
-//      return TypeContextIdentity(other.type).compare(TypeContextIdentity(key.type));
+//      return
+//      TypeContextIdentity(other.type).compare(TypeContextIdentity(key.type));
 //    }
 //
 //    static size_t getExtraAllocationSize(const Key,
@@ -3832,9 +3857,9 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  };
 //}
 //
-//static SimpleGlobalCache<ForeignWitnessTableCacheEntry> ForeignWitnessTables;
+// static SimpleGlobalCache<ForeignWitnessTableCacheEntry> ForeignWitnessTables;
 //
-//static const WitnessTable *_getForeignWitnessTable(
+// static const WitnessTable *_getForeignWitnessTable(
 //    const WitnessTable *witnessTableCandidate,
 //    const TypeContextDescriptor *contextDescriptor,
 //    const ProtocolDescriptor *protocol) {
@@ -3846,23 +3871,25 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //          .first->data;
 //  return result;
 //}
-//
-///***************************************************************************/
-///*** Other metadata routines ***********************************************/
-///***************************************************************************/
-//
-//template <> OpaqueValue *Metadata::allocateBoxForExistentialIn(ValueBuffer *buffer) const {
-//  auto *vwt = getValueWitnesses();
-//  if (vwt->isValueInline())
-//    return reinterpret_cast<OpaqueValue *>(buffer);
-//
-//  // Allocate the box.
-//  BoxPair refAndValueAddr(swift_allocBox(this));
-//  buffer->PrivateData[0] = refAndValueAddr.object;
-//  return refAndValueAddr.buffer;
-//}
-//
-//template <> OpaqueValue *Metadata::allocateBufferIn(ValueBuffer *buffer) const {
+
+/***************************************************************************/
+/*** Other metadata routines ***********************************************/
+/***************************************************************************/
+
+template<>
+OpaqueValue* Metadata::allocateBoxForExistentialIn(ValueBuffer* buffer) const {
+    auto* vwt = getValueWitnesses();
+    if (vwt->isValueInline())
+        return reinterpret_cast<OpaqueValue*>(buffer);
+
+    // Allocate the box.
+    BoxPair refAndValueAddr(swift_allocBox(this));
+    buffer->PrivateData[0] = refAndValueAddr.object;
+    return refAndValueAddr.buffer;
+}
+
+// template <> OpaqueValue *Metadata::allocateBufferIn(ValueBuffer *buffer)
+// const {
 //  auto *vwt = getValueWitnesses();
 //  if (vwt->isValueInline())
 //    return reinterpret_cast<OpaqueValue *>(buffer);
@@ -3874,14 +3901,15 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  return reinterpret_cast<OpaqueValue *>(ptr);
 //}
 //
-//template <> OpaqueValue *Metadata::projectBufferFrom(ValueBuffer *buffer) const{
+// template <> OpaqueValue *Metadata::projectBufferFrom(ValueBuffer *buffer)
+// const{
 //  auto *vwt = getValueWitnesses();
 //  if (vwt->isValueInline())
 //    return reinterpret_cast<OpaqueValue *>(buffer);
 //  return reinterpret_cast<OpaqueValue *>(buffer->PrivateData[0]);
 //}
 //
-//template <> void Metadata::deallocateBufferIn(ValueBuffer *buffer) const {
+// template <> void Metadata::deallocateBufferIn(ValueBuffer *buffer) const {
 //  auto *vwt = getValueWitnesses();
 //  if (vwt->isValueInline())
 //    return;
@@ -3891,8 +3919,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //}
 //
 //#ifndef NDEBUG
-//SWIFT_RUNTIME_EXPORT
-//void _swift_debug_verifyTypeLayoutAttribute(Metadata *type,
+// SWIFT_RUNTIME_EXPORT
+// void _swift_debug_verifyTypeLayoutAttribute(Metadata *type,
 //                                            const void *runtimeValue,
 //                                            const void *staticValue,
 //                                            size_t size,
@@ -3928,7 +3956,7 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //}
 //#endif
 //
-//StringRef swift::getStringForMetadataKind(MetadataKind kind) {
+// StringRef swift::getStringForMetadataKind(MetadataKind kind) {
 //  switch (kind) {
 //#define METADATAKIND(NAME, VALUE) \
 //    case MetadataKind::NAME: \
@@ -3945,9 +3973,9 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 ///***************************************************************************/
 //
 //#ifndef NDEBUG
-//template <>
-//LLVM_ATTRIBUTE_USED
-//void Metadata::dump() const {
+// template <>
+// LLVM_ATTRIBUTE_USED
+// void Metadata::dump() const {
 //  printf("TargetMetadata.\n");
 //  printf("Kind: %s.\n", getStringForMetadataKind(getKind()).data());
 //  printf("Value Witnesses: %p.\n", getValueWitnesses());
@@ -3957,7 +3985,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //    printf("Type Context Description: %p.\n", contextDescriptor);
 //
 //    if (contextDescriptor->isGeneric()) {
-//      auto genericCount = contextDescriptor->getFullGenericContextHeader().Base.getNumArguments();
+//      auto genericCount =
+//      contextDescriptor->getFullGenericContextHeader().Base.getNumArguments();
 //      auto *args = getGenericArgs();
 //      printf("Generic Args: %u: [", genericCount);
 //      for (uint32_t i = 0; i < genericCount; i++) {
@@ -4000,9 +4029,9 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //#endif
 //}
 //
-//template <>
-//LLVM_ATTRIBUTE_USED
-//void ContextDescriptor::dump() const {
+// template <>
+// LLVM_ATTRIBUTE_USED
+// void ContextDescriptor::dump() const {
 //  printf("TargetTypeContextDescriptor.\n");
 //  printf("Flags: 0x%x.\n", this->Flags.getIntValue());
 //  printf("Parent: %p.\n", this->Parent.get());
@@ -4014,9 +4043,9 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  }
 //}
 //
-//template<>
-//LLVM_ATTRIBUTE_USED
-//void EnumDescriptor::dump() const {
+// template<>
+// LLVM_ATTRIBUTE_USED
+// void EnumDescriptor::dump() const {
 //  printf("TargetEnumDescriptor.\n");
 //  printf("Flags: 0x%x.\n", this->Flags.getIntValue());
 //  printf("Parent: %p.\n", this->Parent.get());
@@ -4035,11 +4064,12 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 ///*** Protocol witness tables ***********************************************/
 ///***************************************************************************/
 //
-//namespace {
+// namespace {
 //
 ///// A cache-entry type suitable for use with LockingConcurrentMap.
-//class WitnessTableCacheEntry :
-//    public SimpleLockingCacheEntryBase<WitnessTableCacheEntry, WitnessTable*> {
+// class WitnessTableCacheEntry :
+//    public SimpleLockingCacheEntryBase<WitnessTableCacheEntry, WitnessTable*>
+//    {
 //  /// The type for which this table was instantiated.
 //  const Metadata * const Type;
 //
@@ -4048,7 +4078,7 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  /// allocate the entry.
 //  const ProtocolConformanceDescriptor * const Conformance;
 //
-//public:
+// public:
 //  /// Do the structural initialization necessary for this entry to appear
 //  /// in a concurrent map.
 //  WitnessTableCacheEntry(const Metadata *type,
@@ -4077,11 +4107,13 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  }
 //
 //  static size_t getWitnessTableSize(
-//                            const ProtocolConformanceDescriptor *conformance) {
+//                            const ProtocolConformanceDescriptor *conformance)
+//                            {
 //    auto protocol = conformance->getProtocol();
 //    auto genericTable = conformance->getGenericWitnessTable();
-//    size_t numPrivateWords = genericTable->getWitnessTablePrivateSizeInWords();
-//    size_t numRequirementWords =
+//    size_t numPrivateWords =
+//    genericTable->getWitnessTablePrivateSizeInWords(); size_t
+//    numRequirementWords =
 //      WitnessTableFirstRequirementOffset + protocol->NumRequirements;
 //    return (numPrivateWords + numRequirementWords) * sizeof(void*);
 //  }
@@ -4092,12 +4124,12 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 //} // end anonymous namespace
 //
-//using GenericWitnessTableCache =
+// using GenericWitnessTableCache =
 //  MetadataCache<WitnessTableCacheEntry, /*destructor*/ false>;
-//using LazyGenericWitnessTableCache = Lazy<GenericWitnessTableCache>;
+// using LazyGenericWitnessTableCache = Lazy<GenericWitnessTableCache>;
 //
 ///// Fetch the cache for a generic witness-table structure.
-//static GenericWitnessTableCache &getCache(const GenericWitnessTable *gen) {
+// static GenericWitnessTableCache &getCache(const GenericWitnessTable *gen) {
 //  // Keep this assert even if you change the representation above.
 //  static_assert(sizeof(LazyGenericWitnessTableCache) <=
 //                sizeof(GenericWitnessTable::PrivateDataType),
@@ -4111,9 +4143,10 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 ///// If there's no initializer, no private storage, and all requirements
 ///// are present, we don't have to instantiate anything; just return the
 ///// witness table template.
-//static bool doesNotRequireInstantiation(
-//                              const ProtocolConformanceDescriptor *conformance,
-//                              const GenericWitnessTable *genericTable) {
+// static bool doesNotRequireInstantiation(
+//                              const ProtocolConformanceDescriptor
+//                              *conformance, const GenericWitnessTable
+//                              *genericTable) {
 //  // If the table says it requires instantiation, it does.
 //  if (genericTable->requiresInstantiation()) {
 //    return false;
@@ -4144,9 +4177,9 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 ///// Initialize witness table entries from order independent resilient
 ///// witnesses stored in the generic witness table structure itself.
-//static void initializeResilientWitnessTable(
-//                              const ProtocolConformanceDescriptor *conformance,
-//                              const Metadata *conformingType,
+// static void initializeResilientWitnessTable(
+//                              const ProtocolConformanceDescriptor
+//                              *conformance, const Metadata *conformingType,
 //                              const GenericWitnessTable *genericTable,
 //                              void **table) {
 //  auto protocol = conformance->getProtocol();
@@ -4192,7 +4225,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //    }
 //
 //    // Realize base protocol witnesses.
-//    if (reqt.Flags.getKind() == ProtocolRequirementFlags::Kind::BaseProtocol &&
+//    if (reqt.Flags.getKind() == ProtocolRequirementFlags::Kind::BaseProtocol
+//    &&
 //        table[witnessIndex]) {
 //      // Realize the base protocol witness table.
 //      auto baseReq = protocol->getRequirementBaseDescriptor();
@@ -4206,10 +4240,11 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 ///// Instantiate a brand new witness table for a resilient or generic
 ///// protocol conformance.
-//WitnessTable *
-//WitnessTableCacheEntry::allocate(
-//                               const ProtocolConformanceDescriptor *conformance,
-//                               const void * const *instantiationArgs) {
+// WitnessTable *
+// WitnessTableCacheEntry::allocate(
+//                               const ProtocolConformanceDescriptor
+//                               *conformance, const void * const
+//                               *instantiationArgs) {
 //  auto protocol = conformance->getProtocol();
 //  auto genericTable = conformance->getGenericWitnessTable();
 //
@@ -4223,7 +4258,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  (void)numRequirements;
 //
 //  // Number of bytes for any private storage used by the conformance itself.
-//  size_t privateSizeInWords = genericTable->getWitnessTablePrivateSizeInWords();
+//  size_t privateSizeInWords =
+//  genericTable->getWitnessTablePrivateSizeInWords();
 //
 //  // Find the allocation.
 //  void **fullTable = reinterpret_cast<void**>(this + 1);
@@ -4280,8 +4316,9 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  return castTable;
 //}
 //
-//const WitnessTable *
-//swift::swift_getWitnessTable(const ProtocolConformanceDescriptor *conformance,
+// const WitnessTable *
+// swift::swift_getWitnessTable(const ProtocolConformanceDescriptor
+// *conformance,
 //                             const Metadata *type,
 //                             const void * const *instantiationArgs) {
 //  /// Local function to unique a foreign witness table, if needed.
@@ -4302,8 +4339,10 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  // use the pattern directly.
 //  // accessor directly.
 //  auto genericTable = conformance->getGenericWitnessTable();
-//  if (!genericTable || doesNotRequireInstantiation(conformance, genericTable)) {
-//    return uniqueForeignWitnessTableRef(conformance->getWitnessTablePattern());
+//  if (!genericTable || doesNotRequireInstantiation(conformance, genericTable))
+//  {
+//    return
+//    uniqueForeignWitnessTableRef(conformance->getWitnessTablePattern());
 //  }
 //
 //  auto &cache = getCache(genericTable);
@@ -4314,8 +4353,9 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //}
 //
 ///// Find the name of the associated type with the given descriptor.
-//static StringRef findAssociatedTypeName(const ProtocolDescriptor *protocol,
-//                                        const ProtocolRequirement *assocType) {
+// static StringRef findAssociatedTypeName(const ProtocolDescriptor *protocol,
+//                                        const ProtocolRequirement *assocType)
+//                                        {
 //  // If we don't have associated type names, there's nothing to do.
 //  const char *associatedTypeNamesPtr = protocol->AssociatedTypeNames.get();
 //  if (!associatedTypeNamesPtr) return StringRef();
@@ -4339,9 +4379,9 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  return StringRef();
 //}
 //
-//SWIFT_CC(swift)
-//static MetadataResponse
-//swift_getAssociatedTypeWitnessSlowImpl(
+// SWIFT_CC(swift)
+// static MetadataResponse
+// swift_getAssociatedTypeWitnessSlowImpl(
 //                                      MetadataRequest request,
 //                                      WitnessTable *wtable,
 //                                      const Metadata *conformingType,
@@ -4354,8 +4394,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //    auto requirements = protocol->getRequirements();
 //    assert(assocType >= requirements.begin() &&
 //           assocType < requirements.end());
-//    assert(reqBase == requirements.data() - WitnessTableFirstRequirementOffset);
-//    assert(assocType->Flags.getKind() ==
+//    assert(reqBase == requirements.data() -
+//    WitnessTableFirstRequirementOffset); assert(assocType->Flags.getKind() ==
 //           ProtocolRequirementFlags::Kind::AssociatedTypeAccessFunction);
 //  }
 //#endif
@@ -4366,7 +4406,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  if (LLVM_LIKELY((uintptr_t(witness) &
 //        ProtocolRequirementFlags::AssociatedTypeMangledNameBit) == 0)) {
 //    // Cached metadata pointers are always complete.
-//    return MetadataResponse{(const Metadata *)witness, MetadataState::Complete};
+//    return MetadataResponse{(const Metadata *)witness,
+//    MetadataState::Complete};
 //  }
 //
 //  // Find the mangled name.
@@ -4460,8 +4501,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  return response;
 //}
 //
-//MetadataResponse
-//swift::swift_getAssociatedTypeWitness(MetadataRequest request,
+// MetadataResponse
+// swift::swift_getAssociatedTypeWitness(MetadataRequest request,
 //                                      WitnessTable *wtable,
 //                                      const Metadata *conformingType,
 //                                      const ProtocolRequirement *reqBase,
@@ -4472,20 +4513,22 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  if (LLVM_LIKELY((uintptr_t(witness) &
 //        ProtocolRequirementFlags::AssociatedTypeMangledNameBit) == 0)) {
 //    // Cached metadata pointers are always complete.
-//    return MetadataResponse{(const Metadata *)witness, MetadataState::Complete};
+//    return MetadataResponse{(const Metadata *)witness,
+//    MetadataState::Complete};
 //  }
 //
 //  return swift_getAssociatedTypeWitnessSlow(request, wtable, conformingType,
 //                                            reqBase, assocType);
 //}
 //
-//SWIFT_CC(swift)
-//static const WitnessTable *swift_getAssociatedConformanceWitnessSlowImpl(
+// SWIFT_CC(swift)
+// static const WitnessTable *swift_getAssociatedConformanceWitnessSlowImpl(
 //                                  WitnessTable *wtable,
 //                                  const Metadata *conformingType,
 //                                  const Metadata *assocType,
 //                                  const ProtocolRequirement *reqBase,
-//                                  const ProtocolRequirement *assocConformance) {
+//                                  const ProtocolRequirement *assocConformance)
+//                                  {
 //#ifndef NDEBUG
 //  {
 //    const ProtocolConformanceDescriptor *conformance = wtable->Description;
@@ -4493,8 +4536,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //    auto requirements = protocol->getRequirements();
 //    assert(assocConformance >= requirements.begin() &&
 //           assocConformance < requirements.end());
-//    assert(reqBase == requirements.data() - WitnessTableFirstRequirementOffset);
-//    assert(
+//    assert(reqBase == requirements.data() -
+//    WitnessTableFirstRequirementOffset); assert(
 //      assocConformance->Flags.getKind() ==
 //        ProtocolRequirementFlags::Kind::AssociatedConformanceAccessFunction ||
 //      assocConformance->Flags.getKind() ==
@@ -4550,12 +4593,13 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  swift_runtime_unreachable("Invalid mangled associate conformance");
 //}
 //
-//const WitnessTable *swift::swift_getAssociatedConformanceWitness(
+// const WitnessTable *swift::swift_getAssociatedConformanceWitness(
 //                                  WitnessTable *wtable,
 //                                  const Metadata *conformingType,
 //                                  const Metadata *assocType,
 //                                  const ProtocolRequirement *reqBase,
-//                                  const ProtocolRequirement *assocConformance) {
+//                                  const ProtocolRequirement *assocConformance)
+//                                  {
 //  // Retrieve the witness.
 //  unsigned witnessIndex = assocConformance - reqBase;
 //  auto witness = ((const void* const *)wtable)[witnessIndex];
@@ -4574,8 +4618,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 ///*** Recursive metadata dependencies ***************************************/
 ///***************************************************************************/
 //
-//template <class Result, class Callbacks>
-//static Result performOnMetadataCache(const Metadata *metadata,
+// template <class Result, class Callbacks>
+// static Result performOnMetadataCache(const Metadata *metadata,
 //                                     Callbacks &&callbacks) {
 //  // Handle different kinds of type that can delay their metadata.
 //  const TypeContextDescriptor *description;
@@ -4625,7 +4669,7 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //                                                 cache, key);
 //}
 //
-//bool swift::addToMetadataQueue(MetadataCompletionQueueEntry *queueEntry,
+// bool swift::addToMetadataQueue(MetadataCompletionQueueEntry *queueEntry,
 //                               MetadataDependency dependency) {
 //  struct EnqueueCallbacks {
 //    MetadataCompletionQueueEntry *QueueEntry;
@@ -4640,11 +4684,13 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 //    bool forForeignMetadata(const Metadata *metadata,
 //                            const TypeContextDescriptor *description) {
-//      return ForeignMetadata.get().enqueue(description, QueueEntry, Dependency);
+//      return ForeignMetadata.get().enqueue(description, QueueEntry,
+//      Dependency);
 //    }
 //
 //    bool forSingletonMetadata(const TypeContextDescriptor *description) && {
-//      return SingletonMetadata.get().enqueue(description, QueueEntry, Dependency);
+//      return SingletonMetadata.get().enqueue(description, QueueEntry,
+//      Dependency);
 //    }
 //
 //    bool forTupleMetadata(const TupleTypeMetadata *metadata) {
@@ -4659,7 +4705,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  return performOnMetadataCache<bool>(dependency.Value, std::move(callbacks));
 //}
 //
-//void swift::resumeMetadataCompletion(MetadataCompletionQueueEntry *queueEntry) {
+// void swift::resumeMetadataCompletion(MetadataCompletionQueueEntry
+// *queueEntry) {
 //  struct ResumeCallbacks {
 //    MetadataCompletionQueueEntry *QueueEntry;
 //
@@ -4692,16 +4739,16 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //  performOnMetadataCache<void>(metadata, std::move(callbacks));
 //}
 //
-//MetadataResponse swift::swift_checkMetadataState(MetadataRequest request,
+// MetadataResponse swift::swift_checkMetadataState(MetadataRequest request,
 //                                                 const Metadata *type) {
 //  struct CheckStateCallbacks {
 //    MetadataRequest Request;
 //
 //    /// Generic types just need to be awaited.
 //    MetadataResponse forGenericMetadata(const Metadata *type,
-//                                      const TypeContextDescriptor *description,
-//                                      GenericMetadataCache &cache,
-//                                      MetadataCacheKey key) && {
+//                                      const TypeContextDescriptor
+//                                      *description, GenericMetadataCache
+//                                      &cache, MetadataCacheKey key) && {
 //      return cache.await(key, Request);
 //    }
 //
@@ -4711,7 +4758,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //    }
 //
 //    MetadataResponse forSingletonMetadata(
-//                                  const TypeContextDescriptor *description) && {
+//                                  const TypeContextDescriptor *description) &&
+//                                  {
 //      return SingletonMetadata.get().await(description, Request);
 //    }
 //
@@ -4730,8 +4778,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 ///// Search all the metadata that the given type has transitive completeness
 ///// requirements on for something that matches the given predicate.
-//template <class T>
-//static bool findAnyTransitiveMetadata(const Metadata *type, T &&predicate) {
+// template <class T>
+// static bool findAnyTransitiveMetadata(const Metadata *type, T &&predicate) {
 //  const TypeContextDescriptor *description;
 //
 //  // Classes require their superclass to be transitively complete,
@@ -4792,8 +4840,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //}
 //
 ///// Do a quick check to see if all the transitive type metadata are complete.
-//static bool
-//areAllTransitiveMetadataComplete_cheap(const Metadata *type) {
+// static bool
+// areAllTransitiveMetadataComplete_cheap(const Metadata *type) {
 //  // Look for any transitive metadata that's *incomplete*.
 //  return !findAnyTransitiveMetadata(type, [](const Metadata *type) {
 //    struct IsIncompleteCallbacks {
@@ -4810,7 +4858,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //                              const TypeContextDescriptor *description) {
 //        // If the type doesn't have a completion function, we can assume
 //        // it's transitively complete by construction.
-//        if (!description->getForeignMetadataInitialization().CompletionFunction)
+//        if
+//        (!description->getForeignMetadataInitialization().CompletionFunction)
 //          return false;
 //
 //        // TODO: it might be worth doing a quick check against the cache here.
@@ -4845,8 +4894,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 ///// scan its transitive metadata and actually try to find something that's
 ///// incomplete.  If we don't find anything, then we know all the transitive
 ///// dependencies actually hold, and we can keep going.
-//static MetadataDependency
-//checkTransitiveCompleteness(const Metadata *initialType) {
+// static MetadataDependency
+// checkTransitiveCompleteness(const Metadata *initialType) {
 //  llvm::SmallVector<const Metadata *, 8> worklist;
 //
 //  // An efficient hash-set implementation in the spirit of llvm's SmallPtrSet:
@@ -4928,9 +4977,10 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //}
 //
 ///// Diagnose a metadata dependency cycle.
-//LLVM_ATTRIBUTE_NORETURN
-//static void diagnoseMetadataDependencyCycle(const Metadata *start,
-//                                            ArrayRef<MetadataDependency> links){
+// LLVM_ATTRIBUTE_NORETURN
+// static void diagnoseMetadataDependencyCycle(const Metadata *start,
+//                                            ArrayRef<MetadataDependency>
+//                                            links){
 //  assert(start == links.back().Value);
 //
 //  std::string diagnostic =
@@ -4988,8 +5038,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 ///// Check whether the given metadata dependency is satisfied, and if not,
 ///// return its current dependency, if one exists.
-//static MetadataDependency
-//checkMetadataDependency(MetadataDependency dependency) {
+// static MetadataDependency
+// checkMetadataDependency(MetadataDependency dependency) {
 //  struct IsIncompleteCallbacks {
 //    MetadataState Requirement;
 //    MetadataDependency forGenericMetadata(const Metadata *type,
@@ -5000,13 +5050,15 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //    }
 //
 //    MetadataDependency forForeignMetadata(const Metadata *metadata,
-//                                    const TypeContextDescriptor *description) {
+//                                    const TypeContextDescriptor *description)
+//                                    {
 //      return ForeignMetadata.get().checkDependency(description, Requirement);
 //    }
 //
 //    MetadataDependency forSingletonMetadata(
 //                              const TypeContextDescriptor *description) && {
-//      return SingletonMetadata.get().checkDependency(description, Requirement);
+//      return SingletonMetadata.get().checkDependency(description,
+//      Requirement);
 //    }
 //
 //    MetadataDependency forTupleMetadata(const TupleTypeMetadata *metadata) {
@@ -5023,7 +5075,7 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //}
 //
 ///// Check for an unbreakable metadata-dependency cycle.
-//void swift::checkMetadataDependencyCycle(const Metadata *startMetadata,
+// void swift::checkMetadataDependencyCycle(const Metadata *startMetadata,
 //                                         MetadataDependency firstLink,
 //                                         MetadataDependency secondLink) {
 //  std::vector<MetadataDependency> links;
@@ -5035,7 +5087,8 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //      if (i->Value == newLink.Value) {
 //        auto next = i + 1;
 //        diagnoseMetadataDependencyCycle(i->Value,
-//                                llvm::makeArrayRef(&*next, links.end() - next));
+//                                llvm::makeArrayRef(&*next, links.end() -
+//                                next));
 //      }
 //    }
 //  };
@@ -5054,28 +5107,27 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 /***************************************************************************/
 
 namespace {
-  struct alignas(sizeof(uintptr_t) * 2) PoolRange {
-    static constexpr uintptr_t PageSize = 16 * 1024;
-    static constexpr uintptr_t MaxPoolAllocationSize = PageSize / 2;
+struct alignas(sizeof(uintptr_t) * 2) PoolRange {
+  static constexpr uintptr_t PageSize = 16 * 1024;
+  static constexpr uintptr_t MaxPoolAllocationSize = PageSize / 2;
 
-    /// The start of the allocation.
-    char *Begin;
+  /// The start of the allocation.
+  char *Begin;
 
-    /// The number of bytes remaining.
-    size_t Remaining;
-  };
+  /// The number of bytes remaining.
+  size_t Remaining;
+};
 } // end anonymous namespace
 
 // A statically-allocated pool.  It's zero-initialized, so this
 // doesn't cost us anything in binary size.
 alignas(void *) static char InitialAllocationPool[64 * 1024];
-static std::atomic<PoolRange>
-AllocationPool{PoolRange{InitialAllocationPool,
-                         sizeof(InitialAllocationPool)}};
+static std::atomic<PoolRange> AllocationPool{
+    PoolRange{InitialAllocationPool, sizeof(InitialAllocationPool)}};
 
 void *MetadataAllocator::Allocate(size_t size, size_t alignment) {
-  assert(alignment <= alignof(void*));
-  assert(size % alignof(void*) == 0);
+  assert(alignment <= alignof(void *));
+  assert(size % alignof(void *) == 0);
 
   // If the size is larger than the maximum, just use malloc.
   if (size > PoolRange::MaxPoolAllocationSize)
@@ -5101,10 +5153,9 @@ void *MetadataAllocator::Allocate(size_t size, size_t alignment) {
     }
 
     // Swap in the new state.
-    if (std::atomic_compare_exchange_weak_explicit(&AllocationPool,
-                                                   &curState, newState,
-                                              std::memory_order_relaxed,
-                                              std::memory_order_relaxed)) {
+    if (std::atomic_compare_exchange_weak_explicit(
+            &AllocationPool, &curState, newState, std::memory_order_relaxed,
+            std::memory_order_relaxed)) {
       // If that succeeded, we've successfully allocated.
       __msan_allocated_memory(allocation, size);
       __asan_unpoison_memory_region(allocation, size);
@@ -5122,34 +5173,32 @@ void MetadataAllocator::Deallocate(const void *allocation, size_t size) {
   __asan_poison_memory_region(allocation, size);
 
   if (size > PoolRange::MaxPoolAllocationSize) {
-    free(const_cast<void*>(allocation));
+    free(const_cast<void *>(allocation));
     return;
   }
 
   // Check whether the allocation pool is still in the state it was in
   // immediately after the given allocation.
   PoolRange curState = AllocationPool.load(std::memory_order_relaxed);
-  if (reinterpret_cast<const char*>(allocation) + size != curState.Begin) {
+  if (reinterpret_cast<const char *>(allocation) + size != curState.Begin) {
     return;
   }
 
   // Try to swap back to the pre-allocation state.  If this fails,
   // don't bother trying again; we'll just leak the allocation.
-  PoolRange newState = { reinterpret_cast<char*>(const_cast<void*>(allocation)),
-                         curState.Remaining + size };
-  (void)
-    std::atomic_compare_exchange_strong_explicit(&AllocationPool,
-                                                 &curState, newState,
-                                                 std::memory_order_relaxed,
-                                                 std::memory_order_relaxed);
+  PoolRange newState = {
+      reinterpret_cast<char *>(const_cast<void *>(allocation)),
+      curState.Remaining + size};
+  (void)std::atomic_compare_exchange_strong_explicit(
+      &AllocationPool, &curState, newState, std::memory_order_relaxed,
+      std::memory_order_relaxed);
 }
 
 void *swift::allocateMetadata(size_t size, size_t alignment) {
   return MetadataAllocator().Allocate(size, alignment);
 }
 
-template<>
-bool Metadata::satisfiesClassConstraint() const {
+template <> bool Metadata::satisfiesClassConstraint() const {
   // existential types marked with @objc satisfy class requirement.
   if (auto *existential = dyn_cast<ExistentialTypeMetadata>(this))
     return existential->isObjC();
@@ -5159,7 +5208,7 @@ bool Metadata::satisfiesClassConstraint() const {
 }
 
 //#if !NDEBUG
-//static bool referencesAnonymousContext(Demangle::Node *node) {
+// static bool referencesAnonymousContext(Demangle::Node *node) {
 //  if (node->getKind() == Demangle::Node::Kind::AnonymousContext)
 //    return true;
 //  for (unsigned i = 0, e = node->getNumChildren(); i < e; ++i)
@@ -5169,7 +5218,7 @@ bool Metadata::satisfiesClassConstraint() const {
 //  return false;
 //}
 //
-//void swift::verifyMangledNameRoundtrip(const Metadata *metadata) {
+// void swift::verifyMangledNameRoundtrip(const Metadata *metadata) {
 //  // Enable verification when a special environment variable is set.
 //  // Some metatypes crash when going through the mangler or demangler. A
 //  // lot of tests currently trigger those crashes, resulting in failing
@@ -5184,7 +5233,8 @@ bool Metadata::satisfiesClassConstraint() const {
 //
 //  Demangle::StackAllocatedDemangler<1024> Dem;
 //  auto node = _swift_buildDemanglingForMetadata(metadata, Dem);
-//  // If the mangled node involves types in an AnonymousContext, then by design,
+//  // If the mangled node involves types in an AnonymousContext, then by
+//  design,
 //  // it cannot be looked up by name.
 //  if (referencesAnonymousContext(node))
 //    return;
@@ -5199,12 +5249,14 @@ bool Metadata::satisfiesClassConstraint() const {
 //      .getMetadata();
 //  if (metadata != result)
 //    swift::warning(RuntimeErrorFlagNone,
-//                   "Metadata mangled name failed to roundtrip: %p -> %s -> %p\n",
-//                   metadata, mangledName.c_str(), (const Metadata *)result);
+//                   "Metadata mangled name failed to roundtrip: %p -> %s ->
+//                   %p\n", metadata, mangledName.c_str(), (const Metadata
+//                   *)result);
 //}
 //#endif
 //
-//const TypeContextDescriptor *swift::swift_getTypeContextDescriptor(const Metadata *type) {
+// const TypeContextDescriptor *swift::swift_getTypeContextDescriptor(const
+// Metadata *type) {
 //    return type->getTypeContextDescriptor();
 //}
 //
@@ -5212,8 +5264,8 @@ bool Metadata::satisfiesClassConstraint() const {
 //// implementation of these functions is in the standard library in
 //// KeyPath.swift.
 //
-//SWIFT_RUNTIME_STDLIB_SPI
-//const HeapObject *swift_getKeyPathImpl(const void *pattern,
+// SWIFT_RUNTIME_STDLIB_SPI
+// const HeapObject *swift_getKeyPathImpl(const void *pattern,
 //                                       const void *arguments);
 //
 //#define OVERRIDE_KEYPATH COMPATIBILITY_OVERRIDE
@@ -5221,9 +5273,9 @@ bool Metadata::satisfiesClassConstraint() const {
 //#include "CompatibilityOverride.def"
 //
 //#if defined(_WIN32) && defined(_M_ARM64)
-//namespace std {
-//template <>
-//inline void _Atomic_storage<::PoolRange, 16>::_Unlock() const noexcept {
+// namespace std {
+// template <>
+// inline void _Atomic_storage<::PoolRange, 16>::_Unlock() const noexcept {
 //  __dmb(0x8);
 //  __iso_volatile_store32(&reinterpret_cast<volatile int &>(_Spinlock), 0);
 //  __dmb(0x8);
