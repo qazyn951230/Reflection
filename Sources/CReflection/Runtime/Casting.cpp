@@ -2059,9 +2059,9 @@ bool swift::_conformsToProtocol(const OpaqueValue *value, const Metadata *type,
 // const void *targetKeyHashable);
 //
 //// internal func _dictionaryDownCastConditionalIndirect<SourceKey,
-///SourceValue, / TargetKey, TargetValue>( /   _ source:
-///UnsafePointer<Dictionary<SourceKey, SourceValue>>, /   _ target:
-///UnsafeMutablePointer<Dictionary<TargetKey, TargetValue>> / ) -> Bool
+/// SourceValue, / TargetKey, TargetValue>( /   _ source:
+/// UnsafePointer<Dictionary<SourceKey, SourceValue>>, /   _ target:
+/// UnsafeMutablePointer<Dictionary<TargetKey, TargetValue>> / ) -> Bool
 // SWIFT_CC(swift) SWIFT_RUNTIME_STDLIB_INTERNAL
 // bool _swift_dictionaryDownCastConditionalIndirect(OpaqueValue *destination,
 //    OpaqueValue *source,
@@ -2855,7 +2855,7 @@ bool swift::_conformsToProtocol(const OpaqueValue *value, const Metadata *type,
 //
 ///// public
 ///// func _bridgeAnythingNonVerbatimToObjectiveC<T>(_ x: __owned T) ->
-///AnyObject
+/// AnyObject
 /////
 ///// Called by inlined stdlib code.
 //#define _bridgeAnythingNonVerbatimToObjectiveC \
@@ -2871,7 +2871,7 @@ bool swift::_conformsToProtocol(const OpaqueValue *value, const Metadata *type,
 //
 ////===--- Bridging helpers for the Swift stdlib
 ///----------------------------===// / Functions that must discover and possibly
-///use an arbitrary type's / conformance to a given protocol.  See
+/// use an arbitrary type's / conformance to a given protocol.  See
 ///../core/BridgeObjectiveC.swift for / documentation.
 ////===----------------------------------------------------------------------===//
 //
@@ -3119,8 +3119,8 @@ bool swift::_conformsToProtocol(const OpaqueValue *value, const Metadata *type,
 //}
 
 SWIFT_CC(swift)
-SWIFT_RUNTIME_STDLIB_INTERNAL const Metadata *swift::_swift_class_getSuperclass(
-    const Metadata *theClass) {
+SWIFT_RUNTIME_STDLIB_INTERNAL const Metadata *
+swift::_swift_class_getSuperclass(const Metadata *theClass) {
   if (const ClassMetadata *classType = theClass->getClassObject()) {
     if (classHasSuperclass(classType))
       return getMetadataForClass(classType->Superclass);

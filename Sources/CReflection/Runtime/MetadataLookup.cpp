@@ -1671,8 +1671,8 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
                                     substWitnessTable);
 }
 
-//SWIFT_CC(swift)
-//SWIFT_RUNTIME_EXPORT const
+// SWIFT_CC(swift)
+// SWIFT_RUNTIME_EXPORT const
 //    Metadata *_Nullable swift_getTypeByMangledNameInEnvironment(
 //        const char *typeNameStart, size_t typeNameLength,
 //        const TargetGenericEnvironment<InProcess> *environment,
@@ -1690,12 +1690,13 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
 //      .getMetadata();
 //}
 
-//SWIFT_CC(swift)
-//SWIFT_RUNTIME_EXPORT const
-//    Metadata *_Nullable swift_getTypeByMangledNameInEnvironmentInMetadataState(
-//        size_t metadataState, const char *typeNameStart, size_t typeNameLength,
-//        const TargetGenericEnvironment<InProcess> *environment,
-//        const void *const *genericArgs) {
+// SWIFT_CC(swift)
+// SWIFT_RUNTIME_EXPORT const
+//    Metadata *_Nullable
+//    swift_getTypeByMangledNameInEnvironmentInMetadataState(
+//        size_t metadataState, const char *typeNameStart, size_t
+//        typeNameLength, const TargetGenericEnvironment<InProcess>
+//        *environment, const void *const *genericArgs) {
 //  llvm::StringRef typeName(typeNameStart, typeNameLength);
 //  SubstGenericParametersFromMetadata substitutions(environment, genericArgs);
 //  return swift_getTypeByMangledName(
@@ -1709,9 +1710,9 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
 //      .getMetadata();
 //}
 
-//SWIFT_CC(swift)
-//SWIFT_RUNTIME_EXPORT
-//const Metadata *_Nullable swift_getTypeByMangledNameInContext(
+// SWIFT_CC(swift)
+// SWIFT_RUNTIME_EXPORT
+// const Metadata *_Nullable swift_getTypeByMangledNameInContext(
 //    const char *typeNameStart, size_t typeNameLength,
 //    const TargetContextDescriptor<InProcess> *context,
 //    const void *const *genericArgs) {
@@ -1728,11 +1729,11 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
 //      .getMetadata();
 //}
 
-//SWIFT_CC(swift)
-//SWIFT_RUNTIME_EXPORT const
+// SWIFT_CC(swift)
+// SWIFT_RUNTIME_EXPORT const
 //    Metadata *_Nullable swift_getTypeByMangledNameInContextInMetadataState(
-//        size_t metadataState, const char *typeNameStart, size_t typeNameLength,
-//        const TargetContextDescriptor<InProcess> *context,
+//        size_t metadataState, const char *typeNameStart, size_t
+//        typeNameLength, const TargetContextDescriptor<InProcess> *context,
 //        const void *const *genericArgs) {
 //  llvm::StringRef typeName(typeNameStart, typeNameLength);
 //  SubstGenericParametersFromMetadata substitutions(context, genericArgs);
@@ -1748,8 +1749,8 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
 //}
 
 /// Demangle a mangled name, but don't allow symbolic references.
-//SWIFT_CC(swift)
-//SWIFT_RUNTIME_STDLIB_INTERNAL const
+// SWIFT_CC(swift)
+// SWIFT_RUNTIME_STDLIB_INTERNAL const
 //    Metadata *_Nullable swift_stdlib_getTypeByMangledNameUntrusted(
 //        const char *typeNameStart, size_t typeNameLength) {
 //  llvm::StringRef typeName(typeNameStart, typeNameLength);
@@ -1758,13 +1759,14 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
 //      return nullptr;
 //  }
 //
-//  return swift_getTypeByMangledName(MetadataState::Complete, typeName, nullptr,
+//  return swift_getTypeByMangledName(MetadataState::Complete, typeName,
+//  nullptr,
 //                                    {}, {})
 //      .getMetadata();
 //}
 
-//SWIFT_CC(swift)
-//SWIFT_RUNTIME_EXPORT MetadataResponse swift_getOpaqueTypeMetadata(
+// SWIFT_CC(swift)
+// SWIFT_RUNTIME_EXPORT MetadataResponse swift_getOpaqueTypeMetadata(
 //    MetadataRequest request, const void *const *arguments,
 //    const OpaqueTypeDescriptor *descriptor, unsigned index) {
 //  auto mangledName = descriptor->getUnderlyingTypeArgument(index);
@@ -1781,9 +1783,9 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
 //      .getResponse();
 //}
 
-//SWIFT_CC(swift)
-//SWIFT_RUNTIME_EXPORT const WitnessTable *
-//swift_getOpaqueTypeConformance(const void *const *arguments,
+// SWIFT_CC(swift)
+// SWIFT_RUNTIME_EXPORT const WitnessTable *
+// swift_getOpaqueTypeConformance(const void *const *arguments,
 //                               const OpaqueTypeDescriptor *descriptor,
 //                               unsigned index) {
 //  auto response = swift_getOpaqueTypeMetadata(
@@ -1799,12 +1801,12 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
 // FIXME: delete this #if and dlsym once we don't
 // need to build with older libobjc headers
 //#if !OBJC_GETCLASSHOOK_DEFINED
-//using objc_hook_getClass = BOOL (*)(const char *_Nonnull name,
+// using objc_hook_getClass = BOOL (*)(const char *_Nonnull name,
 //                                    Class _Nullable *_Nonnull outClass);
 //#endif
-//static objc_hook_getClass OldGetClassHook;
+// static objc_hook_getClass OldGetClassHook;
 
-//static BOOL getObjCClassByMangledName(const char *_Nonnull typeName,
+// static BOOL getObjCClassByMangledName(const char *_Nonnull typeName,
 //                                      Class _Nullable *_Nonnull outClass) {
 //  // Demangle old-style class and protocol names, which are still used in the
 //  // ObjC metadata.

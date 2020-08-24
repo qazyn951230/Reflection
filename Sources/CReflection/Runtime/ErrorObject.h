@@ -174,8 +174,8 @@ struct SwiftError : SwiftErrorHeader {
 /// \c isTake should be false.
 SWIFT_CC(swift)
 SWIFT_RUNTIME_STDLIB_API BoxPair
-    swift_allocError(const Metadata *type, const WitnessTable *errorConformance,
-                     OpaqueValue *value, bool isTake);
+swift_allocError(const Metadata *type, const WitnessTable *errorConformance,
+                 OpaqueValue *value, bool isTake);
 
 /// Deallocate an error object whose contained object has already been
 /// destroyed.
@@ -208,18 +208,17 @@ void swift_errorRelease(SwiftError *object);
 /// Breakpoint hook for debuggers.
 SWIFT_CC(swift)
 SWIFT_RUNTIME_STDLIB_API
-    void swift_willThrow(SWIFT_CONTEXT void *unused,
-                         SWIFT_ERROR_RESULT SwiftError **object);
+void swift_willThrow(SWIFT_CONTEXT void *unused,
+                     SWIFT_ERROR_RESULT SwiftError **object);
 
 /// Halt in response to an error.
 SWIFT_CC(swift)
-SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN
-    void swift_errorInMain(SwiftError *object);
+SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN void
+swift_errorInMain(SwiftError *object);
 SWIFT_CC(swift)
-SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN
-    void swift_unexpectedError(SwiftError *object, OpaqueValue *filenameStart,
-                               long filenameLength, bool isAscii,
-                               unsigned long line);
+SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN void
+swift_unexpectedError(SwiftError *object, OpaqueValue *filenameStart,
+                      long filenameLength, bool isAscii, unsigned long line);
 
 #if SWIFT_OBJC_INTEROP
 
@@ -228,7 +227,7 @@ SWIFT_RUNTIME_STDLIB_API LLVM_ATTRIBUTE_NORETURN
 /// errorObject is assumed to be passed at +1 and consumed in this function.
 SWIFT_CC(swift)
 SWIFT_RUNTIME_STDLIB_SPI id
-    _swift_stdlib_bridgeErrorToNSError(SwiftError *errorObject);
+_swift_stdlib_bridgeErrorToNSError(SwiftError *errorObject);
 
 /// Attempt to dynamically cast an NSError object to a Swift ErrorType
 /// implementation using the _ObjectiveCBridgeableErrorType protocol or by
@@ -279,10 +278,9 @@ const size_t _swift_lldb_sizeof_SwiftError;
 #define getErrorEmbeddedNSErrorIndirect                                        \
   MANGLE_SYM(s32_getErrorEmbeddedNSErrorIndirectyyXlSgSPyxGs0B0RzlF)
 SWIFT_CC(swift)
-SWIFT_RUNTIME_STDLIB_INTERNAL id
-    getErrorEmbeddedNSErrorIndirect(const swift::OpaqueValue *error,
-                                    const swift::Metadata *T,
-                                    const swift::WitnessTable *Error);
+SWIFT_RUNTIME_STDLIB_INTERNAL id getErrorEmbeddedNSErrorIndirect(
+    const swift::OpaqueValue *error, const swift::Metadata *T,
+    const swift::WitnessTable *Error);
 #endif
 
 #endif

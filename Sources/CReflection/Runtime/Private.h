@@ -594,11 +594,11 @@ swift_conformsToSwiftProtocol(const Metadata *const type,
 /// \returns metadata for the associated type witness.
 SWIFT_CC(swift)
 SWIFT_RUNTIME_STDLIB_INTERNAL MetadataResponse
-    swift_getAssociatedTypeWitnessSlow(MetadataRequest request,
-                                       WitnessTable *wtable,
-                                       const Metadata *conformingType,
-                                       const ProtocolRequirement *reqBase,
-                                       const ProtocolRequirement *assocType);
+swift_getAssociatedTypeWitnessSlow(MetadataRequest request,
+                                   WitnessTable *wtable,
+                                   const Metadata *conformingType,
+                                   const ProtocolRequirement *reqBase,
+                                   const ProtocolRequirement *assocType);
 
 /// Retrieve an associated conformance witness table from the given witness
 /// table.
@@ -611,11 +611,11 @@ SWIFT_RUNTIME_STDLIB_INTERNAL MetadataResponse
 ///
 /// \returns corresponding witness table.
 SWIFT_CC(swift)
-SWIFT_RUNTIME_STDLIB_INTERNAL const
-    WitnessTable *swift_getAssociatedConformanceWitnessSlow(
-        WitnessTable *wtable, const Metadata *conformingType,
-        const Metadata *assocType, const ProtocolRequirement *reqBase,
-        const ProtocolRequirement *assocConformance);
+SWIFT_RUNTIME_STDLIB_INTERNAL const WitnessTable *
+swift_getAssociatedConformanceWitnessSlow(
+    WitnessTable *wtable, const Metadata *conformingType,
+    const Metadata *assocType, const ProtocolRequirement *reqBase,
+    const ProtocolRequirement *assocConformance);
 } // end namespace swift
 
 #endif /* SWIFT_RUNTIME_PRIVATE_H */

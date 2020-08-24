@@ -105,6 +105,6 @@ private func _dumpSelf(_ value: Any, _ explosion: Explosion, to stream: inout St
     }
 }
 
-//@_silgen_name("copyStructField")
-//func copyStructField<T>(metadata: UnsafePointer<StructMetadata.RawValue>, name: UnsafePointer<Int8>,
+// @_silgen_name("copyStructField")
+// func copyStructField<T>(metadata: UnsafePointer<StructMetadata.RawValue>, name: UnsafePointer<Int8>,
 //                        length: Int, fieldOffset: UInt32, value: T) -> Any

@@ -4,7 +4,11 @@ add_subdirectory(runtime)
 add_library(Runtime SHARED
     include/Config.h
     include/CReflection.h
-    CReflection.cpp)
+    CopyField.cpp
+    CReflection.cpp
+    CReflection.hpp
+    MetaDump.hpp
+    MetaDump.cpp)
 
 set_target_properties(Runtime PROPERTIES
     LANGUAGE CXX
@@ -16,6 +20,9 @@ file(GLOB HEADERS
 
 set_source_files_properties(${HEADERS} PROPERTIES
     HEADER_FILE_ONLY ON)
+
+target_compile_options(Runtime PRIVATE
+    -DDEBUG)
 
 target_include_directories(Runtime PRIVATE
     External/swift/include

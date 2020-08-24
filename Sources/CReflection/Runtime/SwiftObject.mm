@@ -464,18 +464,19 @@ using namespace swift;
 //@end
 //
 //#endif
-//
-///// Decide dynamically whether the given class uses native Swift
-///// reference-counting.
-// bool swift::usesNativeSwiftReferenceCounting(const ClassMetadata *theClass) {
-//#if SWIFT_OBJC_INTEROP
-//    if (!theClass->isTypeMetadata()) return false;
-//  return (theClass->getFlags() & ClassFlags::UsesSwiftRefcounting);
-//#else
-//    return true;
-//#endif
-//}
-//
+
+/// Decide dynamically whether the given class uses native Swift
+/// reference-counting.
+bool swift::usesNativeSwiftReferenceCounting(const ClassMetadata *theClass) {
+#if SWIFT_OBJC_INTEROP
+  if (!theClass->isTypeMetadata())
+    return false;
+  return (theClass->getFlags() & ClassFlags::UsesSwiftRefcounting);
+#else
+  return true;
+#endif
+}
+
 ///// Decide dynamically whether the given type metadata uses native Swift
 ///// reference-counting.  The metadata is known to correspond to a class
 ///// type, but note that does not imply being known to be a ClassMetadata

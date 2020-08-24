@@ -30,52 +30,23 @@ struct Foobar {
 }
 
 let t: Any.Type = Foobar.self // type(of: text)
-//test_print_all_kind(unsafeBitCast(t, to: UnsafeRawPointer.self))
-//test_print_generic_context(unsafeBitCast(t, to: UnsafeRawPointer.self))
-//test_print_properties(unsafeBitCast(t, to: UnsafeRawPointer.self))
-
-//build_demangling_for_metadata(unsafeBitCast(t, to: UnsafeRawPointer.self))
 
 let data = StructMetadata.load(from: t)
 let fields = data.description.fields!
 let field = fields.fieldRecords().first!
 
-//public var mangledTypeName: String? {
-//    let name = rawValue.pointee.mangledTypeName
-//    guard name != 0, let offset = MemoryLayout.offset(of: \RawValue.mangledTypeName) else {
-//        return nil
-//    }
-//    let c = rawValue.reinterpretCast(to: Int8.self)
-//        .advanced(by: offset + Int(name))
-//    return String(cString: c)
-//}
-
 let offset = MemoryLayout.offset(of: \FieldRecord.RawValue.mangledTypeName) ?? 0
 let typeName = field.rawValue.reinterpretCast(to: Int8.self)
     .advanced(by: offset + Int(field.rawValue.pointee.mangledTypeName))
 
-var info = CRTypeInfo()
-getTypeByMangledName(typeName, field.mangledTypeName?.count ?? 0, data.rawValue.reinterpretCast(), &info)
-print(info)
-
-let m = Metadata.init(rawValue: info.metadata!.reinterpretCast(to: Metadata.RawValue.self))
-print(m.kind)
-let sm = m.as(StructMetadata.self)
-print(sm.description.name)
-
-@_silgen_name("copyStructField")
-func copyStructField<T>(metadata: UnsafePointer<StructMetadata.RawValue>, name: UnsafePointer<Int8>,
-                        length: Int, fieldOffset: UInt32, value: T) -> Any
+@_silgen_name("copy_struct_field")
+func copyStructField(metadata: UnsafePointer<StructMetadata.RawValue>, name: UnsafePointer<Int8>,
+                     fieldOffset: UInt32, value: Any) -> Any
 
 let foo = Foobar()
-let value = copyStructField(metadata: sm.rawValue, name: typeName,
-                            length: field.mangledTypeName?.count ?? 0,
+let value = copyStructField(metadata: data.rawValue, name: typeName,
                             fieldOffset: 0, value: foo)
 print(value, type(of: value))
-
-//for i in 0..<fields.fieldRecords().count {
-//    print(data.fieldOffset(at: i) ?? -1)
-//}
 
 //let text = Text("Foobar")
 //    .offset(CGSize.zero)

@@ -2459,7 +2459,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 ///// runtime; that must be done by the caller.
 /////
 ///// This function copies the ivar descriptors and updates each ivar global
-///with
+/// with
 ///// the corresponding offset in \p fieldOffsets, before asking the Objective-C
 ///// runtime to realize the class. The Objective-C runtime will then slide the
 ///// offsets stored in those globals.
@@ -2508,11 +2508,11 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //}
 //
 ///// Generic classes only. Initialize the Objective-C ivar descriptors and
-///field
+/// field
 ///// offset globals and register the class with the runtime.
 /////
 ///// This function copies the ivar descriptors and points each ivar offset at
-///the
+/// the
 ///// corresponding entry in \p fieldOffsets, before asking the Objective-C
 ///// runtime to realize the class. The Objective-C runtime will then slide the
 ///// offsets in \p fieldOffsets.
@@ -2679,7 +2679,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //
 //// Suppress diagnostic about the availability of _objc_realizeClassFromSwift.
 //// We test availability with a nullptr check, but the compiler doesn't see
-///that.
+/// that.
 //#pragma clang diagnostic push
 //#pragma clang diagnostic ignored "-Wunguarded-availability-new"
 //
@@ -2799,7 +2799,7 @@ static MetadataAllocator &getResilientMetadataAllocator() {
 //
 //// Suppress diagnostic about the availability of _objc_realizeClassFromSwift.
 //// We test availability with a nullptr check, but the compiler doesn't see
-///that.
+/// that.
 //#pragma clang diagnostic push
 //#pragma clang diagnostic ignored "-Wunguarded-availability-new"
 //
@@ -3660,7 +3660,7 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 ///// Perform a copy-assignment from one existential container to another.
 ///// Both containers must be of the same existential type representable with
-///one
+/// one
 ///// witness table.
 // OpaqueValue *swift::swift_assignExistentialWithCopy1(OpaqueValue *dest,
 //                                                     const OpaqueValue *src,
@@ -3671,7 +3671,7 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 //
 ///// Perform a copy-assignment from one existential container to another.
 ///// Both containers must be of the same existential type representable with
-///the
+/// the
 ///// same number of witness tables.
 // OpaqueValue *swift::swift_assignExistentialWithCopy(OpaqueValue *dest,
 //                                                    const OpaqueValue *src,
@@ -3876,31 +3876,30 @@ ExistentialCacheEntry::ExistentialCacheEntry(Key key) {
 /*** Other metadata routines ***********************************************/
 /***************************************************************************/
 
-template<>
-OpaqueValue* Metadata::allocateBoxForExistentialIn(ValueBuffer* buffer) const {
-    auto* vwt = getValueWitnesses();
-    if (vwt->isValueInline())
-        return reinterpret_cast<OpaqueValue*>(buffer);
+template <>
+OpaqueValue *Metadata::allocateBoxForExistentialIn(ValueBuffer *buffer) const {
+  auto *vwt = getValueWitnesses();
+  if (vwt->isValueInline())
+    return reinterpret_cast<OpaqueValue *>(buffer);
 
-    // Allocate the box.
-    BoxPair refAndValueAddr(swift_allocBox(this));
-    buffer->PrivateData[0] = refAndValueAddr.object;
-    return refAndValueAddr.buffer;
+  // Allocate the box.
+  BoxPair refAndValueAddr(swift_allocBox(this));
+  buffer->PrivateData[0] = refAndValueAddr.object;
+  return refAndValueAddr.buffer;
 }
 
-// template <> OpaqueValue *Metadata::allocateBufferIn(ValueBuffer *buffer)
-// const {
-//  auto *vwt = getValueWitnesses();
-//  if (vwt->isValueInline())
-//    return reinterpret_cast<OpaqueValue *>(buffer);
-//  // Allocate temporary outline buffer.
-//  auto size = vwt->getSize();
-//  auto alignMask = vwt->getAlignmentMask();
-//  auto *ptr = swift_slowAlloc(size, alignMask);
-//  buffer->PrivateData[0] = ptr;
-//  return reinterpret_cast<OpaqueValue *>(ptr);
-//}
-//
+template <> OpaqueValue *Metadata::allocateBufferIn(ValueBuffer *buffer) const {
+  auto *vwt = getValueWitnesses();
+  if (vwt->isValueInline())
+    return reinterpret_cast<OpaqueValue *>(buffer);
+  // Allocate temporary outline buffer.
+  auto size = vwt->getSize();
+  auto alignMask = vwt->getAlignmentMask();
+  auto *ptr = swift_slowAlloc(size, alignMask);
+  buffer->PrivateData[0] = ptr;
+  return reinterpret_cast<OpaqueValue *>(ptr);
+}
+
 // template <> OpaqueValue *Metadata::projectBufferFrom(ValueBuffer *buffer)
 // const{
 //  auto *vwt = getValueWitnesses();
@@ -3908,16 +3907,16 @@ OpaqueValue* Metadata::allocateBoxForExistentialIn(ValueBuffer* buffer) const {
 //    return reinterpret_cast<OpaqueValue *>(buffer);
 //  return reinterpret_cast<OpaqueValue *>(buffer->PrivateData[0]);
 //}
-//
-// template <> void Metadata::deallocateBufferIn(ValueBuffer *buffer) const {
-//  auto *vwt = getValueWitnesses();
-//  if (vwt->isValueInline())
-//    return;
-//  auto size = vwt->getSize();
-//  auto alignMask = vwt->getAlignmentMask();
-//  swift_slowDealloc(buffer->PrivateData[0], size, alignMask);
-//}
-//
+
+template <> void Metadata::deallocateBufferIn(ValueBuffer *buffer) const {
+  auto *vwt = getValueWitnesses();
+  if (vwt->isValueInline())
+    return;
+  auto size = vwt->getSize();
+  auto alignMask = vwt->getAlignmentMask();
+  swift_slowDealloc(buffer->PrivateData[0], size, alignMask);
+}
+
 //#ifndef NDEBUG
 // SWIFT_RUNTIME_EXPORT
 // void _swift_debug_verifyTypeLayoutAttribute(Metadata *type,

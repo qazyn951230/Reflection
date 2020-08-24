@@ -34,9 +34,9 @@ SWIFT_RUNTIME_STDLIB_INTERNAL bool _swift_stdlib_Hashable_isEqual_indirect(
 /// Calls `Hashable.hashValue.get` through a `Hashable` witness table.
 SWIFT_CC(swift)
 SWIFT_RUNTIME_STDLIB_INTERNAL intptr_t
-    _swift_stdlib_Hashable_hashValue_indirect(const void *value,
-                                              const Metadata *type,
-                                              const HashableWitnessTable *wt);
+_swift_stdlib_Hashable_hashValue_indirect(const void *value,
+                                          const Metadata *type,
+                                          const HashableWitnessTable *wt);
 
 SWIFT_CC(swift)
 SWIFT_RUNTIME_STDLIB_INTERNAL void _swift_convertToAnyHashableIndirect(
@@ -45,9 +45,9 @@ SWIFT_RUNTIME_STDLIB_INTERNAL void _swift_convertToAnyHashableIndirect(
 
 SWIFT_CC(swift)
 SWIFT_RUNTIME_STDLIB_INTERNAL
-    bool _swift_anyHashableDownCastConditionalIndirect(
-        OpaqueValue *source, OpaqueValue *destination,
-        const Metadata *targetType);
+bool _swift_anyHashableDownCastConditionalIndirect(OpaqueValue *source,
+                                                   OpaqueValue *destination,
+                                                   const Metadata *targetType);
 
 /// Find the base type that introduces the `Hashable` conformance.
 /// Because the provided type is known to conform to `Hashable`, this
