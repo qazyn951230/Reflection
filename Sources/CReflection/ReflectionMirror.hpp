@@ -20,40 +20,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef REFLECTION_RUNTIME_H
-#define REFLECTION_RUNTIME_H
+#ifndef REFLECTION_REFLECTION_MIRROR_HPP
+#define REFLECTION_REFLECTION_MIRROR_HPP
 
-#if (__cplusplus)
-    #include <cstdint>
-    #include <cstdbool>
-    #include <cstddef>
-#else
-    #include <stdint.h>
-    #include <stdbool.h>
-    #include <stddef.h>
-#endif // (__cplusplus)
+#if DEBUG_MIRROR
 
-#include "Config.h"
+#include <swift/Runtime/ExistentialContainer.h>
 
-SP_C_FILE_BEGIN
+// The layout of Any.
+using Any = swift::OpaqueExistentialContainer;
 
-SP_OPAQUE_POINTER(demangler);
-SP_OPAQUE_POINTER(dnode);
+// Swift assumes Any is returned in memory.
+// Use AnyReturn to guarantee that even on architectures
+// where Any would be returned in registers.
+struct AnyReturn {
+    Any any;
+    explicit AnyReturn(Any value): any(value) {}
+    // Empty destructor ✅, default destructor ❎
+    ~AnyReturn() {}
 
-struct CRTypeInfo {
-    bool isWeak;
-    bool isUnowned;
-    bool isUnmanaged;
-    const void* SP_NULLABLE metadata;
+    explicit operator Any() const { return any; }
 };
 
-void get_type_by_mangled_name(const uint8_t* name, const void* metadata, struct CRTypeInfo* result);
-const void* SP_NULLABLE get_type_by_mangled_name_in_context(const uint8_t* name,
-    const void* SP_NULLABLE context, const void* SP_NULLABLE arguments);
+static std::tuple<const swift::Metadata*, swift::OpaqueValue*>
+unwrapExistential(const swift::Metadata* T, swift::OpaqueValue* Value);
 
-dnode_p build_demangling_for_metadata(const void* metadata);
-dnode_p build_demangling_for_metadata_in(const void* metadata, demangler_p demangler);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
 
-SP_C_FILE_END
+SWIFT_CC(swift)
+extern "C" [[maybe_unused]] AnyReturn
+swift_reflectionMirror_subscript(swift::OpaqueValue * value, const swift::Metadata* type,
+    intptr_t index, const char** outName, void (** outFreeFunc)(const char*),
+    const swift::Metadata* T);
 
-#endif // REFLECTION_RUNTIME_H
+#pragma clang diagnostic pop
+
+#endif
+
+#endif // REFLECTION_REFLECTION_MIRROR_HPP

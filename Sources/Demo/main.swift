@@ -21,35 +21,15 @@
 // SOFTWARE.
 
 import Reflection
-import CReflection
-//import SwiftUI
+import SwiftUI
 
-struct Foobar {
-    let value = 12
-    let bar = false
-}
+let text = Text("Foobar")
+    .offset(CGSize.zero)
 
-let t: Any.Type = Foobar.self // type(of: text)
-
-let data = StructMetadata.load(from: t)
-let fields = data.description.fields!
-let field = fields.fieldRecords().first!
-
-let offset = MemoryLayout.offset(of: \FieldRecord.RawValue.mangledTypeName) ?? 0
-let typeName = field.rawValue.reinterpretCast(to: Int8.self)
-    .advanced(by: offset + Int(field.rawValue.pointee.mangledTypeName))
-
-@_silgen_name("copy_struct_field")
-func copyStructField(metadata: UnsafePointer<StructMetadata.RawValue>, name: UnsafePointer<Int8>,
-                     fieldOffset: UInt32, value: Any) -> Any
-
-let foo = Foobar()
-let value = copyStructField(metadata: data.rawValue, name: typeName,
-                            fieldOffset: 0, value: foo)
-print(value, type(of: value))
-
-//let text = Text("Foobar")
-//    .offset(CGSize.zero)
+//let mirror = Reflection.Mirror(reflecting: text)
+//for (_, value) in mirror.children {
+//    print(value)
+//}
 
 //Swift.dump(text)
 //▿ SwiftUI.ModifiedContent<SwiftUI.Text, SwiftUI._OffsetEffect>
@@ -69,30 +49,22 @@ print(value, type(of: value))
 //    - width: 0.0
 //    - height: 0.0
 
-//let bar = Foobar()
-//Swift.dump(bar)
-//▿ Demo.Foobar
-//- value: 12
-//- bar: false
-
 //print("--------")
-//dump(bar)
-
-//dump(text)
+dump(text)
 // https://unicode-table.com/en/blocks/box-drawing/
 //SwiftUI.ModifiedContent<SwiftUI.Text, SwiftUI._OffsetEffect>
-//├┬ content: SwiftUI.Text
-//│├──┬ storage: SwiftUI.Text.Storage.anyTextStorage
-//││  └──┬ anyTextStorage: SwiftUI.(unknown context at $7fff43ee9c28).LocalizedTextStorage #0
-//││     ┝━━━ super: SwiftUI.AnyTextStorage
-//││     ├──┬ key: SwiftUI.LocalizedStringKey
-//││     │  ├─── key: "Foobar"
-//││     │  ├─── hasFormatting: false
-//││     │  └─── arguments: 0 elements
-//││     ├─── table: nil
-//││     └─── bundle: nil
-//│└── modifiers: 0 elements
-//└┬ modifier: SwiftUI._OffsetEffect
-// └──┬ offset: (0.0, 0.0)
-//    ├─── width: 0.0
-//    └─── height: 0.0
+//├─ content: SwiftUI.Text
+//│  ├─ storage: SwiftUI.Text.Storage.anyTextStorage
+//│  │  └─ anyTextStorage: SwiftUI.(unknown context at $7fff43ee9c28).LocalizedTextStorage #0
+//│  │     ┝━ super: SwiftUI.AnyTextStorage
+//│  │     ├─ key: SwiftUI.LocalizedStringKey
+//│  │     │  ├─ key: "Foobar"
+//│  │     │  ├─ hasFormatting: false
+//│  │     │  └─ arguments: 0 elements
+//│  │     ├─ table: nil
+//│  │     └─ bundle: nil
+//│  └─ modifiers: 0 elements
+//└─ modifier: SwiftUI._OffsetEffect
+//   └─ offset: (0.0, 0.0)
+//      ├─ width: 0.0
+//      └─ height: 0.0

@@ -29,11 +29,15 @@
 
 #include "runtime/WeakReference.h"
 #include "runtime/Private.h"
-#include "MetaDump.hpp"
 #include "CReflection.hpp"
+
+#if DEBUG_LOG
+#include "ReflectionMirror.hpp"
+#endif
 
 using namespace swift;
 
+#if !DEBUG_MIRROR
 // The layout of Any.
 using Any = OpaqueExistentialContainer;
 
@@ -48,6 +52,7 @@ struct AnyReturn {
 
     explicit operator Any() const { return any; }
 };
+#endif // !DEBUG_MIRROR
 
 static void copyWeakField(const OpaqueValue* data, const TypeInfo& info, Any& result) {
     assert(info.isWeak());
@@ -113,15 +118,15 @@ static void copyWeakField(const OpaqueValue* data, const TypeInfo& info, Any& re
 #pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
 
 // @_silgen_name("copy_struct_field")
-// func copyStructField(metadata: UnsafePointer<StructMetadata.RawValue>, name: UnsafePointer<Int8>,
-//                      fieldOffset: UInt32, value: Any) -> Any
+// func copyStructField<T>(metadata: UnsafePointer<StructMetadata.RawValue>, name: UnsafePointer<Int8>,
+//                         fieldOffset: UInt32, value: T) -> Any
 SWIFT_CC(swift)
-extern "C" AnyReturn copy_struct_field(const StructMetadata* metadata, const char* name,
-    uint32_t fieldOffset, const OpaqueValue* value) {
+extern "C" [[maybe_unused]] AnyReturn copy_struct_field(const StructMetadata* metadata, const char* name,
+    uint32_t fieldOffset, const OpaqueValue* value, [[maybe_unused]] const Metadata* tType) {
     assert(StructMetadata::classof(metadata));
     const auto& info = getTypeByMangledName(metadata, name);
     auto bytes = reinterpret_cast<const char*>(value);
-    auto fieldData = reinterpret_cast<const OpaqueValue *>(bytes + fieldOffset);
+    auto fieldData = reinterpret_cast<const OpaqueValue*>(bytes + fieldOffset);
 
     Any result;
     if (info.isWeak()) {
@@ -129,17 +134,17 @@ extern "C" AnyReturn copy_struct_field(const StructMetadata* metadata, const cha
     } else {
         result.Type = info.getMetadata();
         auto address = result.Type->allocateBoxForExistentialIn(&result.Buffer);
-        result.Type->vw_initializeWithCopy(address, const_cast<OpaqueValue *>(fieldData));
+        result.Type->vw_initializeWithCopy(address, const_cast<OpaqueValue*>(fieldData));
     }
     return AnyReturn(result);
 }
 
 // @_silgen_name("copy_enum_field")
-// func copyEnumField(metadata: UnsafePointer<EnumMetadata.RawValue>, name: UnsafePointer<Int8>,
-//                    indirect: Bool, value: Any) -> Any
+// func copyEnumField<T>(metadata: UnsafePointer<EnumMetadata.RawValue>, name: UnsafePointer<Int8>,
+//                       indirect: Bool, value: T) -> Any
 SWIFT_CC(swift)
-extern "C" AnyReturn copy_enum_field(const EnumMetadata* metadata, const char* name,
-    bool indirect, const OpaqueValue* value) {
+extern "C" [[maybe_unused]] AnyReturn copy_enum_field(const EnumMetadata* metadata, const char* name,
+    bool indirect, const OpaqueValue* value, [[maybe_unused]] const Metadata* tType) {
     assert(EnumMetadata::classof(metadata));
     const auto& info = getTypeByMangledName(metadata, name);
     auto payloadType = info.getMetadata();
@@ -171,11 +176,11 @@ extern "C" AnyReturn copy_enum_field(const EnumMetadata* metadata, const char* n
 }
 
 // @_silgen_name("copy_class_field")
-// func copyClassField(metadata: UnsafePointer<ClassMetadata.RawValue>, name: UnsafePointer<Int8>,
-//                     index: Int, value: Any) -> Any
+// func copyClassField<T>(metadata: UnsafePointer<ClassMetadata.RawValue>, name: UnsafePointer<Int8>,
+//                        index: Int, value: T) -> Any
 SWIFT_CC(swift)
-extern "C" AnyReturn copy_class_field(const ClassMetadata* metadata, const char* name,
-    size_t index, const OpaqueValue* value) {
+extern "C" [[maybe_unused]] AnyReturn copy_class_field(const ClassMetadata* metadata, const char* name,
+    size_t index, const OpaqueValue* value, [[maybe_unused]] const Metadata* tType) {
     assert(ClassMetadata::classof(metadata));
     assert(index >= 0 && index < metadata->getDescription()->NumFields);
     // FIXME: If the class has ObjC heritage, get the field offset using the ObjC
@@ -186,7 +191,7 @@ extern "C" AnyReturn copy_class_field(const ClassMetadata* metadata, const char*
         fieldOffset = metadata->getFieldOffsets()[index];
     } else {
 #if SWIFT_OBJC_INTEROP
-        auto clazz = const_cast<ClassMetadata *>(metadata);
+        auto clazz = const_cast<ClassMetadata*>(metadata);
         auto ivars = class_copyIvarList(reinterpret_cast<Class>(clazz), nullptr);
         fieldOffset = ivar_getOffset(ivars[index]);
         free(ivars);
@@ -197,7 +202,7 @@ extern "C" AnyReturn copy_class_field(const ClassMetadata* metadata, const char*
 
     const auto& info = getTypeByMangledName(metadata, name);
     auto bytes = reinterpret_cast<const char*>(value);
-    auto fieldData = reinterpret_cast<const OpaqueValue *>(bytes + fieldOffset);
+    auto fieldData = reinterpret_cast<const OpaqueValue*>(bytes + fieldOffset);
 
     Any result;
     if (info.isWeak()) {
@@ -205,7 +210,7 @@ extern "C" AnyReturn copy_class_field(const ClassMetadata* metadata, const char*
     } else {
         result.Type = info.getMetadata();
         auto address = result.Type->allocateBoxForExistentialIn(&result.Buffer);
-        result.Type->vw_initializeWithCopy(address, const_cast<OpaqueValue *>(fieldData));
+        result.Type->vw_initializeWithCopy(address, const_cast<OpaqueValue*>(fieldData));
     }
     return AnyReturn(result);
 }

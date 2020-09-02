@@ -20,40 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef REFLECTION_RUNTIME_H
-#define REFLECTION_RUNTIME_H
+/// `dump([1])`
+/// ```
+/// struct Swift.Array<Swift.Int>
+/// └─ _buffer: struct Swift._ArrayBuffer<Swift.Int>
+///    └─ _storage: struct Swift._BridgeStorage<Swift.__ContiguousArrayStorageBase>
+///       └─ rawValue: opaque
+/// struct Swift.Array<Swift.Int>
+/// └─ [0] 1: struct Swift.Int
+/// ```
+public protocol CustomReflected { // Stdlib already has `CustomReflectable`
+    var customExplosion: Explosion { get }
+}
 
-#if (__cplusplus)
-    #include <cstdint>
-    #include <cstdbool>
-    #include <cstddef>
-#else
-    #include <stdint.h>
-    #include <stdbool.h>
-    #include <stddef.h>
-#endif // (__cplusplus)
-
-#include "Config.h"
-
-SP_C_FILE_BEGIN
-
-SP_OPAQUE_POINTER(demangler);
-SP_OPAQUE_POINTER(dnode);
-
-struct CRTypeInfo {
-    bool isWeak;
-    bool isUnowned;
-    bool isUnmanaged;
-    const void* SP_NULLABLE metadata;
-};
-
-void get_type_by_mangled_name(const uint8_t* name, const void* metadata, struct CRTypeInfo* result);
-const void* SP_NULLABLE get_type_by_mangled_name_in_context(const uint8_t* name,
-    const void* SP_NULLABLE context, const void* SP_NULLABLE arguments);
-
-dnode_p build_demangling_for_metadata(const void* metadata);
-dnode_p build_demangling_for_metadata_in(const void* metadata, demangler_p demangler);
-
-SP_C_FILE_END
-
-#endif // REFLECTION_RUNTIME_H
+extension Array: CustomReflected {
+    public var customExplosion: Explosion {
+        let t = map { i in
+            ReflectedElement(type: Element.self, value: i)
+        }
+        return Explosion(collection: ReflectedCollection(children: t))
+    }
+}

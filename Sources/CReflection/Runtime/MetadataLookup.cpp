@@ -1710,9 +1710,8 @@ swift_getTypeByMangledNameImpl(MetadataRequest request, StringRef typeName,
 //      .getMetadata();
 //}
 
-// SWIFT_CC(swift)
-// SWIFT_RUNTIME_EXPORT
-// const Metadata *_Nullable swift_getTypeByMangledNameInContext(
+//SWIFT_CC(swift)
+//const Metadata *_Nullable swift_getTypeByMangledNameInContext(
 //    const char *typeNameStart, size_t typeNameLength,
 //    const TargetContextDescriptor<InProcess> *context,
 //    const void *const *genericArgs) {

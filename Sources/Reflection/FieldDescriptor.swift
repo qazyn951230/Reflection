@@ -82,21 +82,22 @@ public struct FieldRecord: UnsafeRawRepresentable {
         self.rawValue = rawValue
     }
 
-    public var mangledTypeName: String? {
-        let c = RelativeDirectPointer.resolve(any: rawValue, keyPath: \RawValue.mangledTypeName)
-        return (c?.reinterpretCast(to: Int8.self))
-            .map(String.init(cString:))
+    public var mangledTypeName: String {
+        String(cString: cMangledTypeName)
     }
 
-    var cMangledTypeName: UnsafePointer<UInt8> {
+    var cMangledTypeName: UnsafePointer<Int8> {
         RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.mangledTypeName)
-            .reinterpretCast(to: UInt8.self)
+            .reinterpretCast(to: Int8.self)
     }
 
-    public var fieldName: String? {
-        let c = RelativeDirectPointer.resolve(any: rawValue, keyPath: \RawValue.fieldName)
-        return (c?.reinterpretCast(to: Int8.self))
-            .map(String.init(cString:))
+    public var fieldName: String {
+        String(cString: cFieldName)
+    }
+
+    var cFieldName: UnsafePointer<Int8> {
+        RelativeDirectPointer.resolve(rawValue, keyPath: \RawValue.fieldName)
+            .reinterpretCast(to: Int8.self)
     }
 
     public struct RawValue {

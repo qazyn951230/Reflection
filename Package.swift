@@ -9,7 +9,8 @@ let dependencies: [Target.Dependency] = enableDemangle ? ["CReflection"] : []
 
 let settings: [SwiftSetting] = [
     .define("SWIFT_OBJC_INTEROP"),
-    .define(demangle)
+    .define(demangle),
+    .define("DEBUG_MIRROR")
 ]
 
 let package = Package(
@@ -38,7 +39,9 @@ let package = Package(
                     "-Wno-pointer-bool-conversion",
                     "-Wno-tautological-pointer-compare",
                     "-fno-objc-arc"
-                ])
+                ]),
+                .define("DEBUG_LOG"),
+                .define("DEBUG_MIRROR")
             ],
             linkerSettings: [
                 .linkedLibrary("swiftCore"),

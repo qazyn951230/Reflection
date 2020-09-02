@@ -32,14 +32,16 @@ using namespace swift::Demangle;
 
 dnode_p build_demangling_for_metadata(const void* metadata) {
     Demangler demangler;
-    auto node = _swift_buildDemanglingForMetadata(reinterpret_cast<const Metadata*>(metadata), demangler);
+    auto node = _swift_buildDemanglingForMetadata(
+        reinterpret_cast<const Metadata*>(metadata), demangler);
     return wrap(node);
 }
 
-dnode_p build_demangling_for_metadata_in(const void* metadata, demangler_p demangler) {
+dnode_p build_demangling_for_metadata_in(const void* metadata,
+    demangler_p demangler) {
     auto& _demangler = *unwrap(demangler);
-    auto node = _swift_buildDemanglingForMetadata(reinterpret_cast<const Metadata*>(metadata),
-        _demangler);
+    auto node = _swift_buildDemanglingForMetadata(
+        reinterpret_cast<const Metadata*>(metadata), _demangler);
     return wrap(node);
 }
 
@@ -51,10 +53,11 @@ llvm::StringRef makeMangledNameRef(const char* base) {
     auto end = base;
     while (*end != '\0') {
         // Skip over symbolic references.
-        if (*end >= '\x01' && *end <= '\x17')
+        if (*end >= '\x01' && *end <= '\x17') {
             end += sizeof(uint32_t);
-        else if (*end >= '\x18' && *end <= '\x1F')
+        } else if (*end >= '\x18' && *end <= '\x1F') {
             end += sizeof(void*);
+        }
         ++end;
     }
     return llvm::StringRef(base, end - base);
@@ -63,23 +66,43 @@ llvm::StringRef makeMangledNameRef(const char* base) {
 TypeInfo getTypeByMangledName(const Metadata* metadata, const StringRef& name) {
     SubstGenericParametersFromMetadata substitutions(metadata);
     return swift_getTypeByMangledName(
-        MetadataState::Complete,
-        name,
-        substitutions.getGenericArgs(),
+        MetadataState::Complete, name, substitutions.getGenericArgs(),
         [&substitutions](unsigned depth, unsigned index) {
             return substitutions.getMetadata(depth, index);
-        }, [&substitutions](const Metadata* type, unsigned index) {
+        },
+        [&substitutions](const Metadata* type, unsigned index) {
             return substitutions.getWitnessTable(type, index);
         });
 }
 
-void getTypeByMangledName(const char* name, size_t length, const void* metadata, CRTypeInfo* result) {
-    auto base = reinterpret_cast<const Metadata*>(metadata);
-    const auto& info = getTypeByMangledName(base, name, length);
-    if (result != nullptr) {
-        result->isWeak = info.isWeak();
-        result->isUnmanaged = info.isUnmanaged();
-        result->isUnowned = info.isUnowned();
-        result->metadata = info.getMetadata();
+void get_type_by_mangled_name(const uint8_t* name, const void* metadata, CRTypeInfo* result) {
+    if (result == nullptr) {
+        return;
     }
+
+    auto base = reinterpret_cast<const Metadata*>(metadata);
+    const auto& info = getTypeByMangledName(base, reinterpret_cast<const char*>(name));
+    result->isWeak = info.isWeak();
+    result->isUnmanaged = info.isUnmanaged();
+    result->isUnowned = info.isUnowned();
+    result->metadata = info.getMetadata();
+}
+
+// runtime/MetadataLookup.cpp!swift_getTypeByMangledNameInContext
+const void* SP_NULLABLE get_type_by_mangled_name_in_context(const uint8_t* name,
+    const void* SP_NULLABLE context, const void* SP_NULLABLE arguments) {
+    const auto& typeName = makeMangledNameRef(reinterpret_cast<const char*>(name));
+    SubstGenericParametersFromMetadata substitutions{
+        reinterpret_cast<const TargetContextDescriptor<InProcess>*>(context),
+        reinterpret_cast<const void* const*>(arguments)
+    };
+    const auto& info = swift_getTypeByMangledName(MetadataState::Complete, typeName,
+        reinterpret_cast<const void* const*>(arguments),
+        [&substitutions](unsigned depth, unsigned index) {
+            return substitutions.getMetadata(depth, index);
+        },
+        [&substitutions](const Metadata* type, unsigned index) {
+            return substitutions.getWitnessTable(type, index);
+        });
+    return info.getMetadata();
 }

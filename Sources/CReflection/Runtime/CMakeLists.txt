@@ -7,6 +7,7 @@ add_library(swift_runtime
     EnumImpl.h
     ErrorObject.h
     Errors.cpp
+    ExistentialContainer.cpp
     ExistentialMetadataImpl.h
     ImageInspection.h
     ImageInspectionELF.h
@@ -19,6 +20,7 @@ add_library(swift_runtime
     ObjCRuntimeGetImageNameFromClass.h
     Private.h
     ProtocolConformance.cpp
+    ReflectionMirror.mm
     SwiftHashableSupport.h
     SwiftObject.h
     SwiftObject.mm
@@ -39,7 +41,9 @@ set_source_files_properties(${HEADERS} PROPERTIES
 target_compile_options(swift_runtime PRIVATE
     -Wno-deprecated-declarations
     -Wno-pointer-bool-conversion
-    -Wno-tautological-pointer-compare)
+    -Wno-tautological-pointer-compare
+    -DDEBUG
+    -DDEBUG_MIRROR)
 
 target_include_directories(swift_runtime PRIVATE
     ../External/swift/include

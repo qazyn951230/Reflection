@@ -41,6 +41,8 @@ public struct StructMetadata: TargetValueMetadata { // TargetStructMetadata
         if offset == 0 {
             return nil
         }
+        // auto asWords = reinterpret_cast<const void * const*>(this);
+        // return reinterpret_cast<const uint32_t *>(asWords + offset);
         return rawValue.reinterpretCast(to: UnsafeRawPointer.self)
             .advanced(by: Int(offset))
             .reinterpretCast(to: UInt32.self)

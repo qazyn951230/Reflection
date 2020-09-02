@@ -61,18 +61,21 @@ using namespace swift;
 //
 // uintptr_t swift::swift_isaMask = SWIFT_ISA_MASK;
 //#endif
-//
-// const ClassMetadata *swift::_swift_getClass(const void *object) {
-//#if SWIFT_OBJC_INTEROP
-//    if (!isObjCTaggedPointer(object))
-//    return _swift_getClassOfAllocated(object);
-//  return reinterpret_cast<const ClassMetadata*>(
-//    object_getClass(id_const_cast(object)));
-//#else
-//    return _swift_getClassOfAllocated(object);
-//#endif
-//}
-//
+
+#if DEBUG_MIRROR
+
+const ClassMetadata *swift::_swift_getClass(const void *object) {
+#if SWIFT_OBJC_INTEROP
+    if (!isObjCTaggedPointer(object))
+        return _swift_getClassOfAllocated(object);
+    return reinterpret_cast<const ClassMetadata*>(object_getClass(id_const_cast(object)));
+#else
+    return _swift_getClassOfAllocated(object);
+#endif
+}
+
+#endif // DEBUG_MIRROR
+
 //#if SWIFT_OBJC_INTEROP
 //
 ///// Replacement for ObjC object_isClass(), which is unavailable on

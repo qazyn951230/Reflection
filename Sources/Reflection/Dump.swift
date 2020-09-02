@@ -44,19 +44,21 @@ public func dump<T>(_ value: T, name: String? = nil, indent: Int = 0,
     defer {
         stream._unlock()
     }
-    _dump(value, to: &stream, name: name, indent: indent, maxDepth: maxDepth, item: &item, items: &items)
+    _dump(value, kind: Swift.type(of: value) as Any.Type, to: &stream, name: name, indent: indent,
+          maxDepth: maxDepth, item: &item, items: &items)
     return value
 }
 
-// @_semantics("optimize.sil.specialize.generic.never")
-private func _dump(_ value: Any, to stream: inout StandardOutput, name: String?, indent: Int,
-                   maxDepth: Int, item: inout Int, items: inout Set<ObjectIdentifier>) {
+// .../swift/stdlib/public/core/OutputStream.swift!_dumpPrint_unlocked
+@_semantics("optimize.sil.specialize.generic.never")
+private func _dump<T>(_ value: T, kind: Any.Type, to stream: inout StandardOutput, name: String?,
+                      indent: Int, maxDepth: Int, item: inout Int, items: inout Set<ObjectIdentifier>) {
     guard item > 0 else {
         return
     }
     item -= 1
     stream.write(char: 0x20, count: indent)
-    let explosion = Explosion(type(of: value))
+    let explosion = Explosion(kind)
     stream.write(explosion.propertyCount == 0 ?
         "-" : (maxDepth <= 0 ? "▹" : "▿"))
     stream.write(char: 0x20)
@@ -64,24 +66,27 @@ private func _dump(_ value: Any, to stream: inout StandardOutput, name: String?,
         stream.write(name)
         stream.write(": ")
     }
-    _dumpSelf(value, explosion, to: &stream)
+    _dumpSelf(value, kind: kind, explosion, to: &stream)
     stream.write(byte: 0x0A)
     for property in explosion.properties() {
-        if let type = property.type {
-            stream.write(Swift._typeName(type, qualified: true))
-        }
-        if let name = property.name, let offset = property.offset {
-            stream.write(" name: \(name), \(offset)\n")
-        }
-//        _dumpSelf(<#T##value: Any##Any#>, <#T##explosion: Explosion##Explosion#>, to: &<#T##StandardOutput#>)
+        let child = property.copy(from: value)
+//        stream.write(toString(child))
+        _dump(child, kind: property.type, to: &stream, name: property.name, indent: indent,
+              maxDepth: maxDepth, item: &item, items: &items)
     }
 }
 
-// .../swift/stdlib/public/core/OutputStream.swift!_dumpPrint_unlocked
-// @_semantics("optimize.sil.specialize.generic.never")
-private func _dumpSelf(_ value: Any, _ explosion: Explosion, to stream: inout StandardOutput) {
-    let type: Any.Type = Swift.type(of: value)
-    let metadata = Metadata.load(from: type)
+@_transparent
+func toString<T>(_ value: T) -> String {
+    var result = ""
+    _print_unlocked(value, &result)
+    return result
+}
+
+// _dumpPrint_unlocked
+private func _dumpSelf(_ value: Any, kind: Any.Type, _ explosion: Explosion,
+                       to stream: inout StandardOutput) {
+    let metadata = Metadata.load(from: kind)
     if metadata.kind == .struct {
         switch metadata {
         case Int.self:
@@ -94,17 +99,14 @@ private func _dumpSelf(_ value: Any, _ explosion: Explosion, to stream: inout St
             break
         }
     }
-    let kind = metadata.kind
-    switch kind {
+    let _kind = metadata.kind
+    switch _kind {
     case .class, .struct:
-        stream.write("\(kind) ")
-        stream.write(Swift._typeName(type, qualified: true))
-//        stream.write(_typeName(type, kind: kind))
+        stream.write("\(_kind) ")
+        stream.write(Swift._typeName(kind, qualified: true))
+    case .opaque:
+        stream.write("\(_kind) ")
     default:
-        break
+        stream.write("\(_kind) ")
     }
 }
-
-// @_silgen_name("copyStructField")
-// func copyStructField<T>(metadata: UnsafePointer<StructMetadata.RawValue>, name: UnsafePointer<Int8>,
-//                        length: Int, fieldOffset: UInt32, value: T) -> Any

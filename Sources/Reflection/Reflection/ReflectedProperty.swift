@@ -20,40 +20,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef REFLECTION_RUNTIME_H
-#define REFLECTION_RUNTIME_H
+public protocol Reflected {
+    var type: Any.Type { get }
+}
 
-#if (__cplusplus)
-    #include <cstdint>
-    #include <cstdbool>
-    #include <cstddef>
-#else
-    #include <stdint.h>
-    #include <stdbool.h>
-    #include <stddef.h>
-#endif // (__cplusplus)
+public struct ReflectedElement: Reflected {
+    public let type: Any.Type
+    public let value: Any
+}
 
-#include "Config.h"
+public protocol ReflectedProperty: Reflected {
+    var name: String { get }
+    var offset: UInt32 { get }
+    
+    func copy<T>(from value: T) -> Any
+}
 
-SP_C_FILE_BEGIN
+struct StructProperty: ReflectedProperty {
+    public let offset: UInt32
+    public let type: Any.Type
+    public let name: String
+    let metadata: UnsafePointer<StructMetadata.RawValue>
+    let mangledTypeName: UnsafePointer<Int8>
 
-SP_OPAQUE_POINTER(demangler);
-SP_OPAQUE_POINTER(dnode);
+    init(metadata: StructMetadata, name: String, mangledTypeName: UnsafePointer<Int8>,
+         offset: UInt32, type: Any.Type) {
+        self.metadata = metadata.rawValue
+        self.name = name
+        self.mangledTypeName = mangledTypeName
+        self.offset = offset
+        self.type = type
+    }
 
-struct CRTypeInfo {
-    bool isWeak;
-    bool isUnowned;
-    bool isUnmanaged;
-    const void* SP_NULLABLE metadata;
-};
-
-void get_type_by_mangled_name(const uint8_t* name, const void* metadata, struct CRTypeInfo* result);
-const void* SP_NULLABLE get_type_by_mangled_name_in_context(const uint8_t* name,
-    const void* SP_NULLABLE context, const void* SP_NULLABLE arguments);
-
-dnode_p build_demangling_for_metadata(const void* metadata);
-dnode_p build_demangling_for_metadata_in(const void* metadata, demangler_p demangler);
-
-SP_C_FILE_END
-
-#endif // REFLECTION_RUNTIME_H
+    @_transparent
+    func copy<T>(from value: T) -> Any {
+        copyStructField(metadata: metadata, name: mangledTypeName, fieldOffset: offset, value: value)
+    }
+}

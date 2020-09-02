@@ -3400,22 +3400,25 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
   swift_runtime_unreachable("Unhandled ProtocolClassConstraint in switch.");
 }
 
-// template<> ExistentialTypeRepresentation
-// ExistentialTypeMetadata::getRepresentation() const {
-//  // Some existentials use special containers.
-//  switch (Flags.getSpecialProtocol()) {
-//  case SpecialProtocol::Error:
-//    return ExistentialTypeRepresentation::Error;
-//  case SpecialProtocol::None:
-//    break;
-//  }
-//  // The layout of standard containers depends on whether the existential is
-//  // class-constrained.
-//  if (isClassBounded())
-//    return ExistentialTypeRepresentation::Class;
-//  return ExistentialTypeRepresentation::Opaque;
-//}
-//
+#if DEBUG_MIRROR
+template<>
+ExistentialTypeRepresentation
+ExistentialTypeMetadata::getRepresentation() const {
+    // Some existentials use special containers.
+    switch (Flags.getSpecialProtocol()) {
+        case SpecialProtocol::Error:
+            return ExistentialTypeRepresentation::Error;
+        case SpecialProtocol::None:
+            break;
+    }
+    // The layout of standard containers depends on whether the existential is
+    // class-constrained.
+    if (isClassBounded())
+        return ExistentialTypeRepresentation::Class;
+    return ExistentialTypeRepresentation::Opaque;
+}
+#endif // DEBUG_MIRROR
+
 // template<> bool
 // ExistentialTypeMetadata::mayTakeValue(const OpaqueValue *container) const {
 //  switch (getRepresentation()) {
@@ -3467,60 +3470,67 @@ getExistentialValueWitnesses(ProtocolClassConstraint classConstraint,
 //    break;
 //  }
 //}
-//
-// template<> const OpaqueValue *
-// ExistentialTypeMetadata::projectValue(const OpaqueValue *container) const {
-//  switch (getRepresentation()) {
-//  case ExistentialTypeRepresentation::Class: {
-//    auto classContainer =
-//      reinterpret_cast<const ClassExistentialContainer*>(container);
-//    return reinterpret_cast<const OpaqueValue *>(&classContainer->Value);
-//  }
-//  case ExistentialTypeRepresentation::Opaque: {
-//    auto *opaqueContainer =
-//      reinterpret_cast<const OpaqueExistentialContainer*>(container);
-//    return opaqueContainer->projectValue();
-//  }
-//  case ExistentialTypeRepresentation::Error: {
-//    const SwiftError *errorBox
-//      = *reinterpret_cast<const SwiftError * const *>(container);
-//    // If the error is a bridged NSError, then the "box" is in fact itself
-//    // the value.
-//    if (errorBox->isPureNSError())
-//      return container;
-//    return errorBox->getValue();
-//  }
-//  }
-//
-//  swift_runtime_unreachable(
-//      "Unhandled ExistentialTypeRepresentation in switch.");
-//}
-//
-// template<> const Metadata *
-// ExistentialTypeMetadata::getDynamicType(const OpaqueValue *container) const {
-//  switch (getRepresentation()) {
-//  case ExistentialTypeRepresentation::Class: {
-//    auto classContainer =
-//      reinterpret_cast<const ClassExistentialContainer*>(container);
-//    void *obj = classContainer->Value;
-//    return swift_getObjectType(reinterpret_cast<HeapObject*>(obj));
-//  }
-//  case ExistentialTypeRepresentation::Opaque: {
-//    auto opaqueContainer =
-//      reinterpret_cast<const OpaqueExistentialContainer*>(container);
-//    return opaqueContainer->Type;
-//  }
-//  case ExistentialTypeRepresentation::Error: {
-//    const SwiftError *errorBox
-//      = *reinterpret_cast<const SwiftError * const *>(container);
-//    return errorBox->getType();
-//  }
-//  }
-//
-//  swift_runtime_unreachable(
-//      "Unhandled ExistentialTypeRepresentation in switch.");
-//}
-//
+
+#if DEBUG_MIRROR
+template<>
+const OpaqueValue*
+ExistentialTypeMetadata::projectValue(const OpaqueValue* container) const {
+    switch (getRepresentation()) {
+        case ExistentialTypeRepresentation::Class: {
+            auto classContainer =
+                reinterpret_cast<const ClassExistentialContainer*>(container);
+            return reinterpret_cast<const OpaqueValue*>(&classContainer->Value);
+        }
+        case ExistentialTypeRepresentation::Opaque: {
+            auto* opaqueContainer =
+                reinterpret_cast<const OpaqueExistentialContainer*>(container);
+            return opaqueContainer->projectValue();
+        }
+        case ExistentialTypeRepresentation::Error: {
+//            const SwiftError* errorBox
+//                = *reinterpret_cast<const SwiftError* const*>(container);
+//            // If the error is a bridged NSError, then the "box" is in fact itself
+//            // the value.
+//            if (errorBox->isPureNSError())
+//                return container;
+//            return errorBox->getValue();
+            return nullptr;
+        }
+    }
+
+    swift_runtime_unreachable("Unhandled ExistentialTypeRepresentation in switch.");
+}
+#endif // DEBUG_MIRROR
+
+#if DEBUG_MIRROR
+template<>
+const Metadata*
+ExistentialTypeMetadata::getDynamicType(const OpaqueValue* container) const {
+    switch (getRepresentation()) {
+        case ExistentialTypeRepresentation::Class: {
+            auto classContainer =
+                reinterpret_cast<const ClassExistentialContainer*>(container);
+            void* obj = classContainer->Value;
+            return swift_getObjectType(reinterpret_cast<HeapObject*>(obj));
+        }
+        case ExistentialTypeRepresentation::Opaque: {
+            auto opaqueContainer =
+                reinterpret_cast<const OpaqueExistentialContainer*>(container);
+            return opaqueContainer->Type;
+        }
+        case ExistentialTypeRepresentation::Error: {
+//            const SwiftError* errorBox
+//                = *reinterpret_cast<const SwiftError* const*>(container);
+//            return errorBox->getType();
+            return nullptr;
+        }
+    }
+
+    swift_runtime_unreachable(
+        "Unhandled ExistentialTypeRepresentation in switch.");
+}
+#endif // DEBUG_MIRROR
+
 // template<> const WitnessTable *
 // ExistentialTypeMetadata::getWitnessTable(const OpaqueValue *container,
 //                                         unsigned i) const {

@@ -8,7 +8,8 @@ add_library(Runtime SHARED
     CReflection.cpp
     CReflection.hpp
     MetaDump.hpp
-    MetaDump.cpp)
+    MetaDump.cpp
+    ReflectionMirror.hpp)
 
 set_target_properties(Runtime PROPERTIES
     LANGUAGE CXX
@@ -22,7 +23,9 @@ set_source_files_properties(${HEADERS} PROPERTIES
     HEADER_FILE_ONLY ON)
 
 target_compile_options(Runtime PRIVATE
-    -DDEBUG)
+    -DDEBUG
+    -DDEBUG_LOG
+    -DDEBUG_MIRROR)
 
 target_include_directories(Runtime PRIVATE
     External/swift/include

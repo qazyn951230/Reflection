@@ -56,6 +56,8 @@ void dump(const swift::Metadata* metadata, const Options& options);
 void basic(const swift::Metadata* metadata);
 }
 
+#undef FLAGSET_DEFINE_FLAG_ACCESSORS_THIS
+
 #endif // DEBUG
 
 #endif // REFLECTION_META_DUMP_HPP
